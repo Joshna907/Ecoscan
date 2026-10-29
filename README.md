@@ -129,6 +129,8 @@ The root [Blueprint](render.yaml) creates a **web service, background worker, an
 
 The Blueprint uses live OpenAI recognition, which needs a valid key and API billing. To create an explicitly mock-only preview, set `VISION_PROVIDER=mock` on **both** Render services and redeploy. No live deployment URL is claimed until a deployment is verified. Read [Render deployment details](docs/RENDER.md) for checks and operational limits. [Compose deployment](docs/DEPLOYMENT.md) is a separate backend-only, self-hosted option.
 
+**Vercel site option:** [Deploy the React site on Vercel](docs/VERCEL.md) using `vercel.mjs`. It requires a separately hosted HTTPS API, worker, and PostgreSQL database; Vercel alone does not run this backend.
+
 ## Improvements beyond the prototype
 
 - **More useful estimates:** incorporate sourced material, weight, manufacturing region, and garment-condition data; show ranges, provenance, and comparisons with similar new clothing. Keep hypothetical avoided purchases separate from verified savings.
