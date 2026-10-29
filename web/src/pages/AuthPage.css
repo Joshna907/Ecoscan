@@ -1,0 +1,13 @@
+.auth-page { display: grid; grid-template-columns: 1fr minmax(300px, 420px); gap: clamp(36px, 8vw, 120px); align-items: center; max-width: 1050px; margin: 65px auto 100px; min-height: 430px; }
+.auth-intro h1 { font-size: clamp(2.4rem, 5vw, 4.4rem); letter-spacing: -.055em; line-height: 1.05; }
+.auth-intro > p:not(.eyebrow) { max-width: 460px; color: #55695b; }
+.auth-form-wrap { padding: 28px; border: 1px solid rgba(255,255,255,.75); border-radius: 28px; background: rgba(250,251,246,.65); box-shadow: 0 20px 60px rgba(41,72,50,.08); backdrop-filter: blur(18px); }
+.auth-switch { display: flex; gap: 5px; padding: 4px; margin-bottom: 25px; border-radius: 99px; background: #e8ecdf; }
+.auth-switch button { flex: 1; padding: 9px; border: 0; background: transparent; color: #4d6251; }
+.auth-switch button.selected { background: #fffdf8; color: #294832; box-shadow: 0 3px 12px rgba(41,72,50,.1); }
+.auth-form { display: grid; gap: 18px; }
+.auth-form label { display: grid; gap: 7px; font-weight: 600; color: #294832; }
+.auth-form input { width: 100%; min-height: 44px; border-radius: 10px !important; background: rgba(255,255,255,.8) !important; }
+.auth-form .muted { margin: -6px 0 0; }
+.auth-email { font-weight: 600; overflow-wrap: anywhere; }
+@media (max-width: 700px) { .auth-page { grid-template-columns: 1fr; margin: 30px auto 60px; gap: 18px; } }

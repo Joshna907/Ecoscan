@@ -1,0 +1,13 @@
+**/node_modules
+**/dist
+**/.env
+**/.env.*
+.env.production
+.git
+.postgres-test
+api/tests
+docs
+web/src
+web/public
+web/dist
+*.log

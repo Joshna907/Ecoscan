@@ -1,0 +1,65 @@
+
+.wardrobe-hero { margin: 0 0 60px; }
+.ascii-hero { position: relative; isolation: isolate; min-height: 510px; padding: 112px 0 80px; overflow: hidden; display: flex; justify-content: center; align-items: flex-start; }
+.hero-heading { text-align: center; position: relative; z-index: 1; padding: 24px 20px 30px; width: 100%; background: radial-gradient(ellipse 43% 72% at 50% 48%, #f8f7f0eb 0%, #f8f7f0ae 58%, transparent 100%); }
+.hero-heading .eyebrow { text-transform: uppercase; font-size: .68rem; letter-spacing: .14em; color: #73656a; margin: 0 0 24px; }
+.hero-heading h1 { max-width: none; font-size: clamp(2.65rem,5.4vw,4.6rem); font-weight: 450; line-height: 1.06; letter-spacing: -.055em; margin: 0 0 24px; }
+.hero-heading h1 em { color: #866577; font-family: Georgia,serif; font-weight: 400; }
+.hero-description { color: #626a5e; max-width: 570px; margin: 0 auto; font-size: 1rem; line-height: 1.8; }
+.hero-actions { display: flex; justify-content: center; align-items: center; gap: 28px; margin: 24px 0 0; flex-wrap: wrap; }
+.hero-actions .button { padding: 12px 24px; }
+.ascii-botanical { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+.ascii-botanical canvas { width: 100%; height: 100%; display: block; }
+.ascii-botanical > img { position: absolute; left: -8%; top: -20%; width: 62%; height: 140%; object-fit: contain; opacity: .16; }
+.hero-feature-cards { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 18px; position: relative; margin-top: -18px; z-index: 1; padding: 40px 20px 48px; border-radius: 32px; }
+.hero-feature-cards::before { content: ''; position: absolute; inset: 0; z-index: -1; border-radius: 32px; background:
+  radial-gradient(ellipse 45% 65% at 12% 40%, rgba(130, 151, 121, 0.55) 0%, transparent 70%),
+  radial-gradient(ellipse 40% 55% at 88% 35%, rgba(177, 117, 145, 0.4) 0%, transparent 70%),
+  radial-gradient(ellipse 50% 60% at 50% 75%, rgba(162, 187, 135, 0.45) 0%, transparent 70%),
+  radial-gradient(ellipse 35% 45% at 30% 20%, rgba(209, 184, 126, 0.3) 0%, transparent 70%),
+  radial-gradient(ellipse 38% 50% at 70% 65%, rgba(140, 170, 120, 0.35) 0%, transparent 70%);
+  filter: blur(30px); }
+.hero-feature { border: 1px solid rgba(255, 255, 255, 0.5); border-radius: 22px; overflow: hidden; background: rgba(255, 255, 255, 0.25); backdrop-filter: blur(24px) saturate(1.4); -webkit-backdrop-filter: blur(24px) saturate(1.4); display: flex; flex-direction: column; box-shadow: 0 8px 32px rgba(41, 72, 50, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.7), inset 0 0 0 0.5px rgba(255, 255, 255, 0.3); transition: transform 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.1), box-shadow 0.35s ease; }
+.hero-feature:hover { transform: translateY(-5px); box-shadow: 0 20px 60px rgba(41, 72, 50, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.8), inset 0 0 0 0.5px rgba(255, 255, 255, 0.4); }
+.feature-visual { height: 216px; position: relative; overflow: hidden; border-bottom: 1px solid rgba(255, 255, 255, 0.3); background: rgba(255, 255, 255, 0.1); }
+.feature-visual video { display: block; width: 100%; height: 100%; object-fit: contain; background: rgba(255, 255, 255, 0.15); }
+.feature-media-note { position: absolute; bottom: 8px; right: 10px; font-size: .65rem; color: #5b6557; }
+.feature-copy { padding: 25px 24px 24px; display: flex; flex-direction: column; flex: 1; background: rgba(255, 255, 255, 0.15); border-top: 1px solid rgba(255, 255, 255, 0.2); }
+.feature-kicker { text-transform: uppercase; font-size: .63rem; letter-spacing: .12em; color: #6e7564; margin-bottom: 12px; }
+.feature-copy h2 { font-size: 1.27rem; letter-spacing: -.035em; font-weight: 550; margin: 0 0 12px; }
+.feature-copy p { color: #687060; font-size: .85rem; line-height: 1.7; margin: 0 0 22px; }
+.feature-copy a { font-size: .78rem; margin-top: auto; text-decoration: none; }
+.feature-copy a:hover { text-decoration: underline; }
+.estimate-visual { background: rgba(234, 240, 226, 0.3); backdrop-filter: blur(16px) saturate(1.3); -webkit-backdrop-filter: blur(16px) saturate(1.3); display: flex; flex-direction: column; align-items: center; justify-content: center; padding-top: 8px; }
+.estimate-example { font-size: .7rem; color: #60725a; }
+.estimate-visual strong { font-size: 4rem; line-height: 1.3; font-weight: 450; letter-spacing: -.06em; color: #36533f; }
+.estimate-visual strong span { font-size: 1.15rem; letter-spacing: -.025em; }
+.estimate-footnote { font-size: .61rem; color: #64735c; }
+.estimate-ticks { display: flex; gap: 6px; margin-top: 22px; }
+.estimate-ticks i { width: 1px; height: 12px; background: #b1bfa5; }
+.estimate-ticks i:nth-child(4n+1) { height: 20px; background: #829779; }
+.reward-visual { background: rgba(244, 229, 235, 0.25); backdrop-filter: blur(16px) saturate(1.3); -webkit-backdrop-filter: blur(16px) saturate(1.3); display: grid; place-items: center; }
+.reward-object { position: absolute; width: 205px; height: 205px; top: -10px; left: 50%; transform: translateX(-50%) rotate(-6deg); overflow: hidden; }
+.reward-object img { position: absolute; max-width: none; width: 300%; height: 200%; left: -100%; top: -100%; }
+.reward-visual-label { position: absolute; bottom: 16px; font-size: .67rem; color: #845d70; }
+@media (max-width: 850px) {
+ .hero-feature-cards { gap: 12px; }
+ .feature-copy { padding: 20px 16px; }
+ .feature-copy h2 { font-size: 1.13rem; }
+ .feature-visual { height: 190px; }
+ .estimate-ticks { gap: 4px; }
+}
+@media (max-width: 650px) {
+ .ascii-hero { min-height: 570px; padding-top: 100px; }
+ .hero-heading { padding: 25px 6px 35px; background: radial-gradient(ellipse 78% 80% at 50% 48%, #f8f7f0ed 0%, #f8f7f0c4 62%, transparent 100%); }
+ .hero-heading h1 { font-size: clamp(2.4rem,8.3vw,3.4rem); }
+ .hero-description { font-size: .92rem; }
+ .hero-description br { display: none; }
+ .ascii-botanical { inset: 0 auto 0 50%; width: 700px; height: 100%; transform: translateX(-50%); }
+ .hero-feature-cards { grid-template-columns: 1fr; gap: 20px; margin-top: -18px; }
+ .feature-visual { height: 230px; }
+ .feature-copy { padding: 24px; }
+ .feature-copy h2 { font-size: 1.4rem; }
+ .feature-copy p { font-size: .9rem; }
+ .wardrobe-hero { margin-bottom: 40px; }
+}
