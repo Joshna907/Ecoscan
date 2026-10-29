@@ -1,0 +1,27 @@
+{
+  "name": "ecoscan",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev:api": "npm run dev -w api",
+    "dev:worker": "npm run dev:worker -w api",
+    "test": "npm run test -w api",
+    "typecheck": "npm run typecheck -w api",
+    "dev:web": "npm run dev -w web",
+    "build:web": "npm run build -w web",
+    "test:web": "npm run test -w web"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "typescript": "^7.0.2"
+  },
+  "workspaces": [
+    "web",
+    "api",
+    "shared"
+  ],
+  "private": true
+}

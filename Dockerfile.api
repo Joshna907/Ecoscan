@@ -1,0 +1,21 @@
+FROM node:22-alpine
+
+ENV NODE_ENV=production
+WORKDIR /app
+
+# Keep the workspace lockfile so the API, shared schemas, and runtime
+# TypeScript loader are installed at the reviewed versions.
+COPY package.json package-lock.json ./
+COPY api/package.json api/package.json
+COPY shared/package.json shared/package.json
+COPY web/package.json web/package.json
+RUN npm ci --omit=dev --no-audit --no-fund && npm cache clean --force
+
+COPY api/src api/src
+COPY api/db api/db
+COPY shared/src shared/src
+
+USER node
+WORKDIR /app/api
+EXPOSE 5000
+CMD ["node", "--import", "tsx", "src/server.ts"]
