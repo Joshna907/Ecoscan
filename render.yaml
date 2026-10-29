@@ -1,0 +1,77 @@
+# yaml-language-server: $schema=https://render.com/schema/render.yaml.json
+# Paid services: a web instance, a background worker, and persistent PostgreSQL.
+# Render prompts for OPENAI_API_KEY when the Blueprint is first created.
+services:
+  - type: web
+    name: ecoscan-web
+    runtime: node
+    plan: 0.5c-512mb
+    region: singapore
+    buildCommand: npm ci --include=dev && npm run build:web && npm run typecheck
+    preDeployCommand: npm run db:migrate -w api
+    startCommand: npm run start -w api
+    healthCheckPath: /api/ready
+    maxShutdownDelaySeconds: 35
+    envVars:
+      - key: NODE_VERSION
+        value: 22.22.0
+      - key: NODE_ENV
+        value: production
+      - key: SERVE_WEB
+        value: "true"
+      - key: DATA_STORE
+        value: postgres
+      - key: DATABASE_URL
+        fromDatabase:
+          name: ecoscan-db
+          property: connectionString
+      - key: TRUST_PROXY_HOPS
+        value: "1"
+      - key: AUTH_JWT_SECRET
+        generateValue: true
+      - key: RATE_LIMIT_HASH_KEY
+        generateValue: true
+      - key: VISION_PROVIDER
+        value: openai
+      - key: OPENAI_VISION_MODEL
+        value: gpt-6-luna
+      - key: OPENAI_API_KEY
+        sync: false
+
+  - type: worker
+    name: ecoscan-recognition-worker
+    runtime: node
+    plan: 0.5c-512mb
+    region: singapore
+    buildCommand: npm ci --include=dev && npm run typecheck
+    # Each service may deploy first. Migrations use a PostgreSQL advisory lock.
+    preDeployCommand: npm run db:migrate -w api
+    startCommand: npm run worker -w api
+    maxShutdownDelaySeconds: 35
+    envVars:
+      - key: NODE_VERSION
+        value: 22.22.0
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: ecoscan-db
+          property: connectionString
+      - key: VISION_PROVIDER
+        value: openai
+      - key: OPENAI_VISION_MODEL
+        value: gpt-6-luna
+      - key: OPENAI_API_KEY
+        fromService:
+          type: web
+          name: ecoscan-web
+          envVarKey: OPENAI_API_KEY
+
+databases:
+  - name: ecoscan-db
+    databaseName: ecoscan
+    user: ecoscan
+    plan: 0.1c-256mb
+    region: singapore
+    postgresMajorVersion: "17"
+    ipAllowList: []
