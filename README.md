@@ -1,60 +1,84 @@
 # EcoScan
 
-EcoScan is a clothing carbon-estimate prototype. A person uploads a photo, checks the suggested clothing categories, and sees illustrative production estimates, a possible avoided-production scenario, demo points, and example offers. A photo cannot establish a garment's exact footprint or prove a purchase was avoided.
+**See your clothes. Understand an estimate. Explore another way to wear them.** EcoScan turns a clothing photo into reviewable item suggestions, illustrative production-carbon estimates, a reuse comparison, demo points, and fictional offers.
 
-## Current state
+This is a take-home prototype. A photograph cannot reveal a garment's exact material, supply chain, lifetime, or prove that a new purchase was avoided. EcoScan presents estimates and scenarios, not measured emissions savings or carbon credits.
 
-The TypeScript/Express API has image validation, a mock recognizer and optional OpenAI recognition, review and confirmation, deterministic carbon calculations, points, demo offer redemption, and email/password accounts. PostgreSQL stores accounts, revocable login sessions, the latest confirmed estimate, balances, redemptions, and durable recognition jobs. Upload and recognition limits coordinate across API and worker copies. The React frontend provides Home, Scan, Results, Rewards, and Account pages. External private image storage remains future work.
+## The experience
+
+1. Upload a JPEG, PNG, or WebP image (up to 5 MB), or take a photo with the camera.
+2. Wait for suggested T-shirts, jeans, jackets, or shoes. Correct the categories and quantities.
+3. Choose whether wearing those clothes again would replace a new purchase you had already planned.
+4. See the item breakdown, total estimate, optional avoided-production scenario, and demo points.
+5. Explore example offers. A redemption saves a reference and downloadable **sample** PDF; it issues no real voucher.
+6. Sign up to retain a demo balance and latest confirmed result across visits. Anonymous sessions expire.
+
+```text
+React browser ── /api ──► Express API ──► PostgreSQL
+                             │                 ▲
+                             └── scan job ──► worker ──► image recognizer
+                                                  │
+                                        clothing suggestions only
+
+The API calculates the estimates and points after the user reviews the items.
+```
 
 ## Run locally
 
-Install Node.js and Docker Desktop with its engine running. From this directory:
+**Prerequisites:** Node.js 22 and npm; Docker Desktop with its engine running for the PostgreSQL-backed journey. An OpenAI API key is optional for local setup. Mock mode accepts images but always suggests one T-shirt.
 
-```bash
-npm install
+These commands use PowerShell. Run them from the repository root.
+
+### 1. Install dependencies and start the database
+
+```powershell
+git clone https://github.com/Joshna907/Ecoscan.git
+cd Ecoscan
+npm ci
 docker compose up -d postgres
 ```
 
-Copy `api/.env.example` to `api/.env`. For a local demo, set `VISION_PROVIDER=mock`; no OpenAI key is needed. Keep `DATA_STORE=postgres` and the local `DATABASE_URL` from the example. Generate a random hex value with `node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"` for `RATE_LIMIT_HASH_KEY`, and a separate base64url value with `node -e "console.log(require('node:crypto').randomBytes(32).toString('base64url'))"` for `AUTH_JWT_SECRET`. Put both in `api/.env`. Use the same secrets for every API copy. The example database credentials are for local development only. Then run:
+PostgreSQL is available at `localhost:5433`. `compose.yaml` uses local development credentials and a named data volume.
 
-```bash
+### 2. Configure the API
+
+```powershell
+Copy-Item api/.env.example api/.env
+node -e "console.log(require('node:crypto').randomBytes(32).toString('base64url'))"
+node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
+```
+
+Edit `api/.env`: set `AUTH_JWT_SECRET` to the first generated value and `RATE_LIMIT_HASH_KEY` to the second. Keep `DATA_STORE=postgres` and the example `DATABASE_URL` for local Docker. For an offline demo, set `VISION_PROVIDER=mock`. For actual photo recognition, keep `VISION_PROVIDER=openai` and add your key as `OPENAI_API_KEY`; see [OpenAI setup](docs/OPENAI_SETUP.md). **Never commit `api/.env` or put the key in frontend code.**
+
+### 3. Apply migrations and start the app
+
+```powershell
 npm run db:migrate -w api
-npm run dev:api
 ```
 
-In a second terminal, from the same project directory, run `npm run dev:worker`. In PostgreSQL mode, uploading an image returns HTTP `202` with `{ "analysisId": "...", "status": "queued" }`. The browser can call `GET /api/analyses/:analysisId` to see `queued`, `processing`, `ready`, `failed`, or `confirmed`. A `ready` response includes reviewable suggestions. Then confirm through `POST /api/scans/confirm` as before. A confirmation attempted before `ready` returns `409 ANALYSIS_NOT_READY`.
+Open three terminals in the repository root:
 
-The API listens at `http://localhost:5000`. `GET /api/health` reports whether the API process is alive; `GET /api/ready` also checks the PostgreSQL connection when database mode is enabled, returning `503 NOT_READY` if it cannot serve database-backed requests. PostgreSQL data is kept in a Docker volume, so restarting the API does not erase it. To use live image recognition, set `VISION_PROVIDER=openai` and put a valid key in `api/.env`; see [OPENAI_SETUP.md](docs/OPENAI_SETUP.md). Never commit `.env`.
+| Terminal | Command | Purpose |
+| --- | --- | --- |
+| 1 | `npm run dev:api` | API at <http://localhost:5000> |
+| 2 | `npm run dev:worker` | Processes queued image jobs |
+| 3 | `npm run dev:web` | Site at **<http://localhost:5173>** |
 
-For a quick backend demo without Docker, set `VISION_PROVIDER=mock` and `DATA_STORE=memory` in `api/.env`, omit `DATABASE_URL`, and run `npm run dev:api`. This uses the in-memory store, recognizes during the upload request, returns HTTP `200`, and loses state on restart. The worker is only needed in PostgreSQL mode.
+Vite proxies `/api` to the API in development, preserving same-origin cookies. In PostgreSQL mode, an upload returns a queued analysis; the worker makes it ready for review. If an analysis remains queued, check terminal 2. `GET /api/health` checks the process; `GET /api/ready` also checks its database connection.
 
-## Try the backend API
+**Without Docker:** set `DATA_STORE=memory`, `VISION_PROVIDER=mock`, and leave `DATABASE_URL` empty in `api/.env`. Run only the API and web terminals. This mode has no accounts, processes recognition during upload, and loses all state on restart.
 
-Use your own JPEG, PNG, or WebP file (at most 5 MB). These examples use `curl.exe` in PowerShell and keep the same demo session cookie for each request:
+## Run the checks
 
 ```powershell
-curl.exe -c .cookies -b .cookies -F "image=@C:\path\to\shirt.jpg" http://localhost:5000/api/analyses
-```
-
-In PostgreSQL mode, copy the returned `analysisId` and check its status until it is `ready`. In memory mode, the upload response already contains the suggestions. Review and correct the categories before confirming:
-
-```powershell
-curl.exe -b .cookies http://localhost:5000/api/analyses/REPLACE_WITH_ANALYSIS_ID
-curl.exe -c .cookies -b .cookies -H "Content-Type: application/json" -d '{"analysisId":"REPLACE_WITH_ANALYSIS_ID","items":[{"category":"tshirt","quantity":1}],"replacesPlannedNewPurchase":true}' http://localhost:5000/api/scans/confirm
-curl.exe -b .cookies http://localhost:5000/api/scans/latest
-curl.exe -b .cookies http://localhost:5000/api/offers
-```
-
-Replace `REPLACE_WITH_ANALYSIS_ID` with the returned ID and use an actual image path. Supported categories are `tshirt`, `jeans`, `jacket`, and `shoes`. After confirmation, `GET /api/scans/latest` returns the latest estimate for the same session or signed-in account, including after a browser refresh. `POST /api/offers/:offerId/redeem` spends demo points once; the offer IDs and costs come from `GET /api/offers`. See the [API contract](docs/ARCHITECTURE.md#api-contract) for responses and errors. Delete the local `.cookies` file after the demo.
-
-## Test
-
-```bash
 npm run typecheck
 npm test
+npm run build:web
+npm run test:web
+npm run lint -w web
 ```
 
-Those commands run the backend checks with local recognizers. To also run the PostgreSQL integration tests, set `TEST_DATABASE_URL` to the local test database connection string before `npm test`. In PowerShell:
+The default backend run skips PostgreSQL integration tests. To include them while Docker PostgreSQL is running:
 
 ```powershell
 $env:TEST_DATABASE_URL='postgresql://ecoscan:ecoscan@localhost:5433/ecoscan'
@@ -62,39 +86,55 @@ npm test
 Remove-Item Env:TEST_DATABASE_URL
 ```
 
-The database tests create and remove their own session and account rows. Do not point `TEST_DATABASE_URL` at a production database. A running PostgreSQL server is required; tests skip that suite when the variable is absent.
-
-## Accounts
-
-Open **Account** in the site header to sign up or log in. Accounts require PostgreSQL mode and migration `004_accounts.sql`; memory mode still supports anonymous scanning but account creation returns `503`. Signup uses an email address and a password of 12–128 characters. It attaches the current anonymous browser session, so existing demo points stay with the new account. Login restores the account's balance on another browser or after a restart. Logout revokes the current login token. The API provides `POST /api/auth/signup`, `POST /api/auth/login`, `GET /api/auth/me`, and `POST /api/auth/logout`.
-
-Passwords are stored as salted scrypt hashes. Signup and login issue signed HS256 JWTs with subject, issuer, audience, issue time, expiry, and a unique token ID. JWTs travel in an HTTP-only, SameSite cookie, marked Secure under HTTPS. The API verifies the signature and claims and checks a hashed token record in PostgreSQL, so logout revokes the token immediately. All API copies must share the same `AUTH_JWT_SECRET` (a base64url-encoded 32-byte random value), which must be set in `api/.env` for local PostgreSQL mode or `.env.production` for Compose deployment. Rotate the secret deliberately: rotation invalidates all current logins. Login attempts are limited per email across API copies. These are still demo rewards: verified email, password reset, additional abuse controls, and a durable reward ledger would be needed before offering real value.
-
-## How the backend is arranged
-
-`api/src/routes` receives HTTP requests. `api/src/services` coordinates scanning, confirmation, recognition jobs, and offers. `api/src/domain` holds the carbon and points rules. `api/src/store` has the in-memory and PostgreSQL storage adapters. `shared/src` holds the API schemas. Versioned database migrations live in `api/db` and are applied with `npm run db:migrate -w api`.
-
-The PostgreSQL adapter stores demo balances and uses transactions with row locks for confirmation and redemption. It keeps a saved confirmation response so a retry awards no extra points. An upload reservation has a database expiry so a crashed API cannot block a session forever. Workers claim jobs with database row locks and a two-minute lease; crashed claims can be retried, up to three attempts. Image bytes are deleted after success, final failure, or one day in the queue. In this phase, images up to 5 MB are held privately in PostgreSQL while queued. The queue is capped at 100 jobs by default (at most about 500 MB of raw image bytes). This simplifies an initial deployment but increases database size and write load; move images to private object storage with automatic expiry when traffic warrants it. In PostgreSQL mode, upload rate and concurrency limits are shared across API copies. Worker copies also share a concurrent recognition cap and daily call budget. The daily count limits calls, not monetary cost or image token use.
+Tests create and clean up their own rows. Never point `TEST_DATABASE_URL` at production. Frontend tests simulate API responses; they do not test physical camera hardware or a live OpenAI account.
 
 ## Carbon and reward assumptions
 
-The versioned `demo-v1` catalogue uses **T-shirt 5, jeans 10, jacket 15, shoes 8 kg CO₂e** as rough production placeholders for comparable new clothing. If the person says wearing the item again would replace a planned new purchase, the possible avoided-production scenario is `estimated production × 0.5`; otherwise it is zero. Demo points are `round(possible avoided kg CO₂e × 10)`. These are illustrative assumptions, not measured savings, carbon credits, or redeemable real-world value. Offers are fictitious. The challenge asks for offers users could redeem; the interactive redemption here is an extra demonstration. Redeeming one deducts points and saves a record with a reference, visible on return visits. The browser can download that record as a sample PDF. No physical item or partner voucher is issued.
+The versioned [`demo-v1` catalogue](api/src/domain/carbonCatalogue.ts) stores placeholder production values for a comparable new item:
 
-## Product improvements
+| Item | Estimated production |
+| --- | ---: |
+| T-shirt | 5 kg CO₂e |
+| Jeans | 10 kg CO₂e |
+| Jacket | 15 kg CO₂e |
+| Shoes | 8 kg CO₂e |
 
-Show a comparison with a similar new garment, an uncertainty range, and the assumptions behind each estimate. Add material, garment weight, origin, and condition only when they can be supported by reliable data or user input. Keep any “potential avoided” scenario separate from measured emissions savings. Real partner offers would require verified eligibility and abuse controls.
+The [calculation](api/src/domain/calculateEstimate.ts) multiplies each value by the confirmed quantity and sums the items. When the user selects the planned-purchase comparison, `possible avoided production = total × 0.5`; otherwise it is zero. `demo points = round(possible avoided kg CO₂e × 10)`.
 
-## Technical scaling
+For example, one T-shirt gives a **5 kg CO₂e production estimate**, a **2.5 kg CO₂e hypothetical avoided-production scenario**, and **25 demo points** when that comparison is selected. The 50% factor and point rate are assumptions, not verified savings. The image model only suggests categories; it never assigns a carbon value or points. The fictional offers cost 25, 60, and 100 points. Redeeming one deducts demo points and creates a sample receipt without partner fulfilment.
 
-Keep one modular backend codebase. Use authenticated accounts before issuing real rewards. Move temporary images from PostgreSQL to private object storage as scan volume grows. Measure queue delay, provider errors and cost, database latency, and reward anomalies; increase API or worker copies in response to the measured bottleneck. External lifecycle-data and real offer-provider APIs would need explicit data quality, caching, timeout, and failure policies.
+## Code structure and design decisions
 
-See [architecture](docs/ARCHITECTURE.md), [service layer](docs/SERVICE_LAYER.md), and [backend reliability](docs/BACKEND_RELIABILITY.md) for the present design and tradeoffs.
+| Directory | Responsibility |
+| --- | --- |
+| `web/src/` | React pages, camera/upload journey, results, rewards, and account UI |
+| `api/src/routes/` | HTTP validation and responses |
+| `api/src/services/` | Scan, recognition-job, auth, and offer workflows |
+| `api/src/domain/` | Carbon, points, and offer rules |
+| `api/src/store/` | Memory and PostgreSQL adapters |
+| `api/db/` | Versioned SQL migrations |
+| `shared/src/` | Request and response schemas used by API and web |
+| `api/tests/`, `web/tests/` | Backend and frontend tests |
 
-For containerized backend startup, migrations, HTTPS proxy requirements, scaling, backups, and release checks, see [deployment and operations](docs/DEPLOYMENT.md).
+The API is a modular application rather than a collection of microservices. PostgreSQL stores accounts, revocable JWT login sessions, balances, redemptions, the latest confirmed estimate, and recognition jobs. Confirmation and redemption use transactions to protect points from retries and concurrent requests. Workers use leases and shared limits. Photos are temporarily kept in PostgreSQL until processing or expiry; this keeps the initial deployment simple but increases database size and backup exposure. See [architecture](docs/ARCHITECTURE.md) and [backend reliability](docs/BACKEND_RELIABILITY.md).
 
+## Deploy on Render
 
-## Basic frontend
+The root [Blueprint](render.yaml) creates a **web service, background worker, and persistent PostgreSQL** in Singapore. They use paid plans; review [Render pricing](https://render.com/pricing) before creating them. The web service builds React and serves it through Express on the same HTTPS origin as `/api`. The web and worker run idempotent migrations before starting.
 
-Start the API as described above, then run `npm run dev:web` in another terminal and open http://localhost:5173. The Vite development proxy sends `/api` requests to port 5000. For PostgreSQL mode, also run the worker. The interface supports image upload, camera capture, item review, estimates, and demo offer redemption.
+1. Connect this GitHub repository to Render and choose **New → Blueprint**.
+2. Select the `main` branch and `render.yaml`. Review the three resources and their costs.
+3. Enter `OPENAI_API_KEY` in Render's secret prompt. Render generates the other secrets and wires the database. Do not put secret values in the YAML.
+4. Apply the Blueprint. Once both services are running, open the web service's `onrender.com` URL, check `/api/ready`, and complete a scan through Results and Rewards.
 
-Run `npm run build:web`, `npm run test:web`, and `npm run lint -w web` to check the frontend. See [the frontend UX guide](web/README.md) for page responsibilities, user flow, code structure, and static-host deployment requirements.
+The Blueprint uses live OpenAI recognition, which needs a valid key and API billing. To create an explicitly mock-only preview, set `VISION_PROVIDER=mock` on **both** Render services and redeploy. No live deployment URL is claimed until a deployment is verified. Read [Render deployment details](docs/RENDER.md) for checks and operational limits. [Compose deployment](docs/DEPLOYMENT.md) is a separate backend-only, self-hosted option.
+
+## Improvements beyond the prototype
+
+- **More useful estimates:** incorporate sourced material, weight, manufacturing region, and garment-condition data; show ranges, provenance, and comparisons with similar new clothing. Keep hypothetical avoided purchases separate from verified savings.
+- **Scaling:** add API and worker instances when request latency or queue delay warrants it. They already coordinate through PostgreSQL. Move temporary photos to private object storage with expiry when database write load or backup size becomes a bottleneck. Monitor queue age, database latency, provider failures and spend, and unusual point activity.
+- **External integrations:** a lifecycle-data API could replace placeholder values with versioned, cached estimates and explicit fallbacks. A real offer provider would need inventory, eligibility checks, redemption idempotency, fraud controls, and reconciliation. Neither integration is claimed in this demo.
+
+## Further reading
+
+[Frontend UX](web/README.md) · [API contract and architecture](docs/ARCHITECTURE.md) · [Service layer](docs/SERVICE_LAYER.md) · [Reliability](docs/BACKEND_RELIABILITY.md) · [OpenAI setup](docs/OPENAI_SETUP.md) · [Render deployment](docs/RENDER.md)

@@ -1,6 +1,6 @@
 # EcoScan frontend: UI and UX
 
-This is a deliberately plain React interface. Styling lives in src/index.css and src/App.css so the appearance can change without rewriting API calls or the scan workflow.
+This React interface uses the EcoScan floral theme. Shared styling lives in `src/index.css` and `src/App.css`; page and component styles sit beside their owners. The scan workflow and API client remain separate from the visual components.
 
 ## Pages and navigation
 
@@ -53,7 +53,7 @@ The DOM tests use controlled API responses. They cover review and redemption, in
 
 ## Deployment
 
-npm run build:web creates web/dist. Serve these static files and proxy /api to the backend under the same HTTPS origin. The Vite development proxy is not included in the build. The existing production Compose file remains a backend deployment. Do not place an OpenAI key in Vite environment variables or frontend source.
+`npm run build:web` creates `web/dist`. On Render, the Express web service serves those files and `/api` on the same HTTPS origin; `render.yaml` runs the API and recognition worker as separate services. The Vite development proxy is not part of the production build. The production Compose file remains a backend-only deployment. Never put an OpenAI key in Vite environment variables or frontend source.
 
 
 

@@ -41,6 +41,7 @@ interface AppOptions {
   readiness?: () => Promise<void>
   trustedProxyHops?: number
   auth?: AuthService
+  staticDir?: string
 }
 
 export function createApp(recognizer: ClothingRecognizer = selectRecognizer(), options: AppOptions = {}) {
@@ -79,6 +80,10 @@ export function createApp(recognizer: ClothingRecognizer = selectRecognizer(), o
   app.use('/api/analyses', createAnalysisRouter(analyses, resolveSession, rateLimiter, gate))
   app.use('/api/scans', createScanRouter(scans, resolveSession))
   app.use('/api/offers', createOfferRouter(offers, resolveSession))
+
+  // A hosted web service can serve the Vite build on the same origin as /api.
+  // The UI uses hash routes, so Express only needs to serve / and the assets.
+  if (options.staticDir) app.use(express.static(options.staticDir))
 
   app.use((_request, response) => {
     response.locals.errorCode = 'NOT_FOUND'

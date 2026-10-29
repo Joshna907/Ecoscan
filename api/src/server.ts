@@ -1,4 +1,6 @@
 import { existsSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+import { join } from 'node:path'
 import { createApp } from './app'
 import { loadReliabilityConfig } from './config'
 import { Pool } from 'pg'
@@ -27,6 +29,10 @@ if (storeMode === 'postgres' && !process.env.RATE_LIMIT_HASH_KEY) throw new Erro
 if (storeMode === 'postgres' && !process.env.AUTH_JWT_SECRET) throw new Error('AUTH_JWT_SECRET is required when DATA_STORE=postgres')
 const pool = storeMode === 'postgres' ? new Pool({ connectionString: process.env.DATABASE_URL, max: 10 }) : undefined
 if (pool) await pool.query('SELECT 1 FROM eco_scan_rate_buckets LIMIT 0')
+const staticDir = process.env.SERVE_WEB === 'true' ? fileURLToPath(new URL('../../web/dist/', import.meta.url)) : undefined
+if (staticDir && !existsSync(join(staticDir, 'index.html'))) {
+  throw new Error('SERVE_WEB=true requires a built web/dist directory; run npm run build:web')
+}
 const app = createApp(undefined, {
   config,
   store: pool ? new PostgresSessionStore(pool, config) : undefined,
@@ -36,6 +42,7 @@ const app = createApp(undefined, {
   readiness: pool ? async () => { await pool.query('SELECT 1') } : undefined,
   trustedProxyHops,
   auth: pool ? new AuthService(pool, process.env.AUTH_JWT_SECRET!) : undefined,
+  staticDir,
 })
 const cleanup = setInterval(() => { void app.locals.cleanup().catch(() => console.error('EcoScan cleanup failed')) }, config.cleanupIntervalMs)
 cleanup.unref()
