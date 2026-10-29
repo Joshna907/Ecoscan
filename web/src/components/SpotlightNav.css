@@ -1,0 +1,10 @@
+.spotlight-nav { --spotlight-x: 50%; position: relative; display: flex; align-items: center; gap: 2px; padding: 4px; margin-left: auto; overflow: hidden; isolation: isolate; border: 1px solid rgba(255,255,255,.72); border-radius: 999px; background: rgba(255,255,255,.27); box-shadow: inset 0 1px 0 rgba(255,255,255,.75), 0 5px 22px rgba(39,73,48,.08); backdrop-filter: blur(18px) saturate(145%); -webkit-backdrop-filter: blur(18px) saturate(145%); }
+.spotlight-cursor { position: absolute; inset: 0; z-index: 0; pointer-events: none; opacity: 0; background: radial-gradient(110px 65px at var(--spotlight-x) 100%, rgba(179,111,144,.33), transparent 75%); transition: opacity .2s ease; }
+.spotlight-nav[data-hovered="true"] .spotlight-cursor { opacity: 1; }
+.spotlight-active { position: absolute; top: 4px; bottom: 4px; z-index: 0; border-radius: 999px; background: rgba(222,236,210,.72); box-shadow: 0 3px 13px rgba(69,108,69,.11), inset 0 1px 0 rgba(255,255,255,.72); transition: left .38s cubic-bezier(.22,1,.36,1), width .38s cubic-bezier(.22,1,.36,1); }
+.spotlight-active::after { content: ''; position: absolute; left: 22%; right: 22%; bottom: -4px; height: 2px; border-radius: 50%; background: #b67493; box-shadow: 0 0 9px #b6749388; }
+.spotlight-nav a { position: relative; z-index: 1; display: block; padding: 9px 19px; border: 0; border-radius: 999px; color: #4f6753; font-size: .84rem; font-weight: 550; line-height: 1.2; text-decoration: none; white-space: nowrap; transition: color .2s ease; }
+.spotlight-nav a:hover, .spotlight-nav a.active { color: #213e2d; }
+.spotlight-nav a:focus-visible { outline: 2px solid #a45377; outline-offset: -3px; }
+@media (max-width: 520px) { .spotlight-nav a { padding: 8px 11px; font-size: .78rem; } }
+@media (prefers-reduced-motion: reduce) { .spotlight-cursor, .spotlight-active, .spotlight-nav a { transition: none; } }
