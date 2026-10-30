@@ -1,6 +1,6 @@
 import { Router } from 'express'
-import type { ResolveSession } from '../middleware/sessionContext'
-import type { ScanService } from '../services/scanService'
+import type { ResolveSession } from '../middleware/sessionContext.js'
+import type { ScanService } from '../services/scanService.js'
 
 export function createScanRouter(service: ScanService, resolveSession: ResolveSession): Router {
   const router = Router()

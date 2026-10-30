@@ -1,9 +1,9 @@
 import { randomBytes, randomUUID } from 'node:crypto'
 import { Pool, type PoolClient } from 'pg'
 import { confirmScanResponseSchema, type AnalysisResponse, type ConfirmScanResponse, type ScanEstimate } from 'shared'
-import type { ReliabilityConfig } from '../config'
-import { ApplicationError } from '../services/applicationError'
-import type { EcoScanStore, RewardSnapshot } from '../services/ports'
+import type { ReliabilityConfig } from '../config.js'
+import { ApplicationError } from '../services/applicationError.js'
+import type { EcoScanStore, RewardSnapshot } from '../services/ports.js'
 
 type SessionRow = { id: string; demo_points_balance: number }
 type AnalysisRow = { status: string; fingerprint: string | null; result: unknown; expires_at: Date }

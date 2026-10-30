@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express'
-import type { EcoScanStore } from '../services/ports'
-import type { AuthService } from '../services/authService'
+import type { EcoScanStore } from '../services/ports.js'
+import type { AuthService } from '../services/authService.js'
 
 const COOKIE_NAME = 'ecoscan_demo_session'
 export const AUTH_COOKIE_NAME = 'ecoscan_auth'

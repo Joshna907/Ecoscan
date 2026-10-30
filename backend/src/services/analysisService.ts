@@ -1,11 +1,11 @@
 import { randomUUID } from 'node:crypto'
 import { performance } from 'node:perf_hooks'
 import { analysisResponseSchema, type AnalysisJobStatus, type AnalysisResponse } from 'shared'
-import type { EcoScanStore } from './ports'
-import type { ClothingRecognizer } from './vision/types'
-import type { RecognitionJobs } from './recognitionJobs'
-import { ApplicationError } from './applicationError'
-import type { PostgresVisionAdmission } from './visionAdmission'
+import type { EcoScanStore } from './ports.js'
+import type { ClothingRecognizer } from './vision/types.js'
+import type { RecognitionJobs } from './recognitionJobs.js'
+import { ApplicationError } from './applicationError.js'
+import type { PostgresVisionAdmission } from './visionAdmission.js'
 
 interface AnalysisContext {
   isCancelled?: () => boolean

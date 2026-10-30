@@ -9,7 +9,7 @@ import {
   DEMO_DISPLACEMENT_FACTOR,
   DEMO_POINTS_PER_SCENARIO_KG,
   PRODUCTION_KG_CO2E,
-} from './carbonCatalogue'
+} from './carbonCatalogue.js'
 
 const roundKg = (value: number) => Math.round(value * 100) / 100
 

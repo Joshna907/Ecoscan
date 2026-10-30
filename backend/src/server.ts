@@ -1,13 +1,13 @@
 import { existsSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { join } from 'node:path'
-import { createApp } from './app'
-import { loadReliabilityConfig } from './config'
+import { createApp } from './app.js'
+import { loadReliabilityConfig } from './config.js'
 import { Pool } from 'pg'
-import { PostgresSessionStore } from './store/postgresSessions'
-import { PostgresRecognitionJobs } from './services/recognitionJobs'
-import { PostgresScanRateLimiter, PostgresUploadGate } from './middleware/postgresTrafficControl'
-import { AuthService } from './services/authService'
+import { PostgresSessionStore } from './store/postgresSessions.js'
+import { PostgresRecognitionJobs } from './services/recognitionJobs.js'
+import { PostgresScanRateLimiter, PostgresUploadGate } from './middleware/postgresTrafficControl.js'
+import { AuthService } from './services/authService.js'
 
 if (existsSync('.env')) process.loadEnvFile('.env')
 

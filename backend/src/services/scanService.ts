@@ -1,7 +1,7 @@
 import { confirmScanRequestSchema, type ConfirmScanResponse } from 'shared'
-import { calculateEstimate } from '../domain/calculateEstimate'
-import { ApplicationError } from './applicationError'
-import type { EcoScanStore } from './ports'
+import { calculateEstimate } from '../domain/calculateEstimate.js'
+import { ApplicationError } from './applicationError.js'
+import type { EcoScanStore } from './ports.js'
 
 export class ScanService {
   constructor(private readonly store: Pick<EcoScanStore, 'confirmOnce' | 'getLatestResult'>) {}

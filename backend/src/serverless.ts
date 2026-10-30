@@ -1,10 +1,10 @@
 import { Pool } from 'pg'
-import { createApp } from './app'
-import { loadReliabilityConfig } from './config'
-import { PostgresSessionStore } from './store/postgresSessions'
-import { PostgresScanRateLimiter, PostgresUploadGate } from './middleware/postgresTrafficControl'
-import { AuthService } from './services/authService'
-import { PostgresVisionAdmission } from './services/visionAdmission'
+import { createApp } from './app.js'
+import { loadReliabilityConfig } from './config.js'
+import { PostgresSessionStore } from './store/postgresSessions.js'
+import { PostgresScanRateLimiter, PostgresUploadGate } from './middleware/postgresTrafficControl.js'
+import { AuthService } from './services/authService.js'
+import { PostgresVisionAdmission } from './services/visionAdmission.js'
 
 // A Vercel invocation cannot rely on a continuously running recognition worker.
 // createApp's direct recognition path completes the image analysis in the request.

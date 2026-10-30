@@ -1,6 +1,6 @@
-import type { ClothingRecognizer } from './vision/types'
-import type { RecognitionJobs } from './recognitionJobs'
-import type { PostgresVisionAdmission } from './visionAdmission'
+import type { ClothingRecognizer } from './vision/types.js'
+import type { RecognitionJobs } from './recognitionJobs.js'
+import type { PostgresVisionAdmission } from './visionAdmission.js'
 
 export class RecognitionWorker {
   constructor(private readonly jobs: RecognitionJobs, private readonly recognizer: ClothingRecognizer,

@@ -1,8 +1,8 @@
 import { Router, type Response } from 'express'
 import { z } from 'zod'
-import { HttpError } from '../httpError'
-import { AUTH_COOKIE_NAME, cookieValue } from '../middleware/sessionContext'
-import type { AuthService } from '../services/authService'
+import { HttpError } from '../httpError.js'
+import { AUTH_COOKIE_NAME, cookieValue } from '../middleware/sessionContext.js'
+import type { AuthService } from '../services/authService.js'
 
 const DEMO_COOKIE_NAME = 'ecoscan_demo_session'
 const credentials = z.object({ email: z.string(), password: z.string() }).strict()

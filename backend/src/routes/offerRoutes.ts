@@ -1,6 +1,6 @@
 import { Router } from 'express'
-import type { ResolveSession } from '../middleware/sessionContext'
-import type { OfferService } from '../services/offerService'
+import type { ResolveSession } from '../middleware/sessionContext.js'
+import type { OfferService } from '../services/offerService.js'
 
 export function createOfferRouter(service: OfferService, resolveSession: ResolveSession): Router {
   const router = Router()

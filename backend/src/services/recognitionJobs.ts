@@ -1,9 +1,9 @@
 import { randomUUID } from 'node:crypto'
 import { Pool, type PoolClient } from 'pg'
 import { analysisJobStatusSchema, analysisResponseSchema, type AnalysisJobStatus, type AnalysisResponse } from 'shared'
-import type { ReliabilityConfig } from '../config'
-import { ApplicationError } from './applicationError'
-import type { ClothingRecognizer } from './vision/types'
+import type { ReliabilityConfig } from '../config.js'
+import { ApplicationError } from './applicationError.js'
+import type { ClothingRecognizer } from './vision/types.js'
 
 export interface ClaimedRecognitionJob {
   analysisId: string

@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { Pool } from 'pg'
-import type { ReliabilityConfig } from '../config'
+import type { ReliabilityConfig } from '../config.js'
 
 export class VisionAdmissionError extends Error {
   constructor(public readonly code: 'VISION_BUSY' | 'VISION_BUDGET_EXHAUSTED') {

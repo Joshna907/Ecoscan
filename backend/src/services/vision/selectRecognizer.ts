@@ -1,6 +1,6 @@
-import type { ClothingRecognizer } from './types'
-import { mockRecognizer } from './mockRecognizer'
-import { createOpenAIRecognizer } from './openAIRecognizer'
+import type { ClothingRecognizer } from './types.js'
+import { mockRecognizer } from './mockRecognizer.js'
+import { createOpenAIRecognizer } from './openAIRecognizer.js'
 
 export function selectRecognizer(): ClothingRecognizer {
   const provider = process.env.VISION_PROVIDER ?? 'mock'

@@ -1,8 +1,8 @@
 import { createHmac, randomUUID } from 'node:crypto'
 import type { RequestHandler } from 'express'
 import { Pool, type PoolClient } from 'pg'
-import type { ReliabilityConfig } from '../config'
-import { HttpError } from '../httpError'
+import type { ReliabilityConfig } from '../config.js'
+import { HttpError } from '../httpError.js'
 
 async function transaction<T>(pool: Pool, work: (client: PoolClient) => Promise<T>): Promise<T> {
   const client = await pool.connect()

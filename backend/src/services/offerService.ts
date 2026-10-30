@@ -1,7 +1,7 @@
 import { offersResponseSchema, redeemOfferResponseSchema, type OffersResponse, type RedeemOfferResponse } from 'shared'
-import { DEMO_OFFERS } from '../domain/offerCatalogue'
-import { ApplicationError } from './applicationError'
-import type { EcoScanStore } from './ports'
+import { DEMO_OFFERS } from '../domain/offerCatalogue.js'
+import { ApplicationError } from './applicationError.js'
+import type { EcoScanStore } from './ports.js'
 
 export class OfferService {
   constructor(private readonly store: Pick<EcoScanStore, 'getRewards' | 'redeemOnce'>) {}

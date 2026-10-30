@@ -1,11 +1,11 @@
 import { existsSync } from 'node:fs'
 import { setTimeout as delay } from 'node:timers/promises'
 import { Pool } from 'pg'
-import { loadReliabilityConfig } from './config'
-import { PostgresRecognitionJobs } from './services/recognitionJobs'
-import { RecognitionWorker } from './services/recognitionWorker'
-import { selectRecognizer } from './services/vision/selectRecognizer'
-import { PostgresVisionAdmission, VisionAdmissionError } from './services/visionAdmission'
+import { loadReliabilityConfig } from './config.js'
+import { PostgresRecognitionJobs } from './services/recognitionJobs.js'
+import { RecognitionWorker } from './services/recognitionWorker.js'
+import { selectRecognizer } from './services/vision/selectRecognizer.js'
+import { PostgresVisionAdmission, VisionAdmissionError } from './services/visionAdmission.js'
 
 if (existsSync('.env')) process.loadEnvFile('.env')
 if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required for the recognition worker')

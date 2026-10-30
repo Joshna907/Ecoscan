@@ -1,9 +1,9 @@
 import { randomBytes, randomUUID } from 'node:crypto'
 import { confirmScanResponseSchema, type ConfirmScanResponse, type ScanEstimate } from 'shared'
-import { reliabilityConfigSchema, type ReliabilityConfig } from '../config'
-import { ApplicationError } from '../services/applicationError'
-import type { EcoScanStore, RewardSnapshot } from '../services/ports'
-import type { RecognitionSuggestion } from '../services/vision/types'
+import { reliabilityConfigSchema, type ReliabilityConfig } from '../config.js'
+import { ApplicationError } from '../services/applicationError.js'
+import type { EcoScanStore, RewardSnapshot } from '../services/ports.js'
+import type { RecognitionSuggestion } from '../services/vision/types.js'
 
 interface AnalysisBase { id: string; createdAt: number }
 type AnalysisRecord = AnalysisBase & (

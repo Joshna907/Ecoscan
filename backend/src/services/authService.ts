@@ -2,7 +2,7 @@ import { createHash, randomBytes, randomUUID, scrypt as scryptCallback, timingSa
 import { promisify } from 'node:util'
 import { SignJWT, jwtVerify } from 'jose'
 import type { Pool, PoolClient } from 'pg'
-import { HttpError } from '../httpError'
+import { HttpError } from '../httpError.js'
 
 const scrypt = promisify(scryptCallback)
 const LOGIN_TTL_DAYS = 30

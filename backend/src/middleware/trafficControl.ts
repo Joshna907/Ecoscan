@@ -1,6 +1,6 @@
 import type { RequestHandler } from 'express'
-import type { ReliabilityConfig } from '../config'
-import { HttpError } from '../httpError'
+import type { ReliabilityConfig } from '../config.js'
+import { HttpError } from '../httpError.js'
 
 interface Bucket { tokens: number; updatedAt: number }
 

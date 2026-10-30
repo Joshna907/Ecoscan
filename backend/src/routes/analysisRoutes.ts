@@ -1,9 +1,9 @@
 import { Router, type Request, type Response } from 'express'
 import multer from 'multer'
-import type { ResolveSession } from '../middleware/sessionContext'
-import type { AnalysisService } from '../services/analysisService'
-import { hasSupportedImageSignature } from './imageValidation'
-import { HttpError } from '../httpError'
+import type { ResolveSession } from '../middleware/sessionContext.js'
+import type { AnalysisService } from '../services/analysisService.js'
+import { hasSupportedImageSignature } from './imageValidation.js'
+import { HttpError } from '../httpError.js'
 import type { RequestHandler } from 'express'
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024

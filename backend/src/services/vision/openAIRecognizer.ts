@@ -2,7 +2,7 @@ import OpenAI from 'openai'
 import { zodTextFormat } from 'openai/helpers/zod'
 import { z } from 'zod'
 import { clothingCategorySchema } from 'shared'
-import type { ClothingRecognizer } from './types'
+import type { ClothingRecognizer } from './types.js'
 
 const clothingResponseSchema = z.object({
   categories: z.array(clothingCategorySchema),
