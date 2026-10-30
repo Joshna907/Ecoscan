@@ -7,7 +7,7 @@ This is a take-home prototype. A photograph cannot reveal a garment's exact mate
 ## The experience
 
 1. Upload a JPEG, PNG, or WebP image (up to 5 MB), or take a photo with the camera.
-2. Wait for suggested T-shirts, jeans, jackets, or shoes. Correct the categories and quantities.
+2. Wait for suggested T-shirts, jeans, jackets, or shoes. Review the categories and quantities. Manual corrections still receive an estimate but are not reward-eligible.
 3. Choose whether wearing those clothes again would replace a new purchase you had already planned.
 4. See the item breakdown, total estimate, optional avoided-production scenario, and demo points.
 5. Explore example offers. A redemption saves a reference and downloadable **sample** PDF; it issues no real voucher.
@@ -20,7 +20,7 @@ React browser ── /api ──► Express API ──► PostgreSQL
                                                   │
                                         clothing suggestions only
 
-The API calculates the estimates and points after the user reviews the items.
+The API calculates estimates after review. Demo points require an unchanged live-AI suggestion, a planned-purchase replacement choice, and an image that has not already earned points in the session or account.
 ```
 
 ## Run locally
@@ -90,7 +90,7 @@ Tests create and clean up their own rows. Never point `TEST_DATABASE_URL` at pro
 
 ## Carbon and reward assumptions
 
-The versioned [`demo-v1` catalogue](backend/src/domain/carbonCatalogue.ts) stores placeholder production values for a comparable new item:
+The versioned [`demo-v2` catalogue](backend/src/domain/carbonCatalogue.ts) stores illustrative category benchmarks for a comparable new item:
 
 | Item | Estimated production |
 | --- | ---: |
@@ -99,9 +99,9 @@ The versioned [`demo-v1` catalogue](backend/src/domain/carbonCatalogue.ts) store
 | Jacket | 15 kg CO₂e |
 | Shoes | 8 kg CO₂e |
 
-The [calculation](backend/src/domain/calculateEstimate.ts) multiplies each value by the confirmed quantity and sums the items. When the user selects the planned-purchase comparison, `possible avoided production = total × 0.5`; otherwise it is zero. `demo points = round(possible avoided kg CO₂e × 10)`.
+The [calculation](backend/src/domain/calculateEstimate.ts) multiplies each value by the confirmed quantity and sums the items. When the user selects the planned-purchase comparison, `possible avoided production = total × 0.5`; otherwise it is zero. An unchanged live-AI suggestion can receive `demo points = round(possible avoided kg CO₂e × 10)`. Manual, corrected, mock, duplicate-image, and non-replacement scans receive zero points. A scan is capped at ten total items.
 
-For example, one T-shirt gives a **5 kg CO₂e production estimate**, a **2.5 kg CO₂e hypothetical avoided-production scenario**, and **25 demo points** when that comparison is selected. The 50% factor and point rate are assumptions, not verified savings. The image model only suggests categories; it never assigns a carbon value or points. The fictional offers cost 25, 60, and 100 points. Redeeming one deducts demo points and creates a sample receipt without partner fulfilment.
+For example, one unchanged live-AI T-shirt suggestion gives a **5 kg CO₂e category benchmark**, a **2.5 kg CO₂e hypothetical avoided-production scenario**, and **25 demo points** when that comparison is selected. The 50% factor and point rate are assumptions, not verified savings. The image model only suggests categories; it never assigns a carbon value or points. The fictional offers cost 25, 60, and 100 points. Redeeming one deducts demo points and creates a sample receipt without partner fulfilment.
 
 ## Code structure and design decisions
 
@@ -117,7 +117,7 @@ For example, one T-shirt gives a **5 kg CO₂e production estimate**, a **2.5 kg
 | `shared/src/` | Request and response schemas used by API and web |
 | `backend/tests/`, `web/tests/` | Backend and frontend tests |
 
-The API is a modular application rather than a collection of microservices. PostgreSQL stores accounts, revocable JWT login sessions, balances, redemptions, the latest confirmed estimate, and recognition jobs. Confirmation and redemption use transactions to protect points from retries and concurrent requests. Workers use leases and shared limits. Photos are temporarily kept in PostgreSQL until processing or expiry; this keeps the initial deployment simple but increases database size and backup exposure. See [architecture](docs/ARCHITECTURE.md) and [backend reliability](docs/BACKEND_RELIABILITY.md).
+The API is a modular application rather than a collection of microservices. PostgreSQL stores accounts, revocable JWT login sessions, balances, redemptions, the latest confirmed estimate, recognition jobs, and one-way image hashes used to prevent duplicate point claims within a session or account. Confirmation and redemption use transactions to protect points from retries and concurrent requests. Workers use leases and shared limits. Photos are temporarily kept in PostgreSQL until processing or expiry; this keeps the initial deployment simple but increases database size and backup exposure. See [architecture](docs/ARCHITECTURE.md) and [backend reliability](docs/BACKEND_RELIABILITY.md).
 
 ## Deploy on Vercel and Neon
 

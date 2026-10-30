@@ -66,11 +66,11 @@ Multipart field: `image`. Accept JPEG, PNG, or WebP up to 5 MB. Check the file c
 }
 ```
 
-`recognitionMode` is shown in the UI. The mock always suggests one T-shirt, regardless of image content; it is a clearly labelled demonstration and requires user review. Setting `VISION_PROVIDER=openai` selects the OpenAI Responses API. The image is sent as a base64 data URL and the response is constrained to supported clothing categories. The provider suggests categories only; the server computes all carbon and reward numbers. In PostgreSQL mode, repeated provider failure marks the queued analysis `failed` and awards no points. In-memory mode returns `503 VISION_UNAVAILABLE`. Do not show an invented confidence percentage. The MVP validates MIME type and common file signatures; a production image decoder would provide stronger corruption checks.
+`recognitionMode` is shown in the UI. The mock always suggests one T-shirt, regardless of image content; it is a clearly labelled demonstration, requires user review, and cannot earn points. Setting `VISION_PROVIDER=openai` selects the OpenAI Responses API. The image is sent as a base64 data URL and the response is constrained to supported clothing categories. The provider suggests categories only; the server computes all carbon and reward numbers. In PostgreSQL mode, repeated provider failure marks the queued analysis `failed` and awards no points. In-memory mode returns `503 VISION_UNAVAILABLE`. Do not show an invented confidence percentage. The MVP validates MIME type and common file signatures; a production image decoder would provide stronger corruption checks.
 
 ### `POST /api/scans/confirm`
 
-The user submits corrected item categories and the comparison choice. The API validates the categories, computes every number with versioned rules, records demo points in the chosen store, and saves the response in a confirmed scan record. It also saves the latest estimate on the session so the Results page can reopen it after a refresh. A repeated equivalent confirmation returns that original response without awarding again. Equivalence uses totals per category and the comparison choice, so row ordering or splitting a quantity into multiple rows does not change it. A changed confirmation returns `409 CONFIRMATION_CONFLICT`. The replayed balance is the original snapshot; use `GET /api/offers` for the current balance.
+The user submits reviewed item categories and the comparison choice. The API validates at most ten total items and always computes the category estimate. Points are awarded only when a live vision result has a stored image hash, the confirmed category totals exactly match the suggestions, the user selected the planned-purchase comparison, and that hash has not already earned points in the session or account. Manual, corrected, mock, duplicate, and non-replacement scans save an estimate with zero points. The latest estimate is saved on the session so Results survives refresh. A repeated equivalent confirmation returns its original response. A changed confirmation returns `409 CONFIRMATION_CONFLICT`.
 
 ```json
 {
@@ -87,7 +87,8 @@ The user submits corrected item categories and the comparison choice. The API va
   "scenarioPotentialAvoidedKgCo2e": 2.5,
   "demoPointsAwarded": 25,
   "demoPointsBalance": 25,
-  "assumptionsVersion": "demo-v1"
+  "rewardStatus": "awarded",
+  "assumptionsVersion": "demo-v2"
 }
 ```
 
@@ -115,7 +116,7 @@ With PostgreSQL mode, the latest confirmed estimate, balances, and redemptions a
 
 Use an in-memory catalogue matching the challenge's illustrative examples: T-shirt 5, jeans 10, jacket 15, shoes 8 kg CO2e for production of a comparable new item. These are **demo placeholders**, not scientifically validated product footprints. Show the assumption and version in the result and README. Add categories only when we can describe their assumptions.
 
-For the optional comparison, `scenarioPotentialAvoidedKgCo2e = totalEstimatedProductionKgCo2e × 0.5` when the user says this wear would replace a planned new purchase; otherwise it is zero. The 0.5 displacement factor is an explicit demo assumption, not a measured saving. `demoPointsAwarded = round(scenarioPotentialAvoidedKgCo2e × 10)`. Points are an engagement mechanic, not a carbon credit. The UI must never label the scenario as carbon *actually saved*.
+For the optional comparison, `scenarioPotentialAvoidedKgCo2e = totalEstimatedProductionKgCo2e × 0.5` when the user says this wear would replace a planned new purchase; otherwise it is zero. The 0.5 displacement factor is an explicit demo assumption, not a measured saving. Only an eligible unchanged live-AI result receives `demoPointsAwarded = round(scenarioPotentialAvoidedKgCo2e × 10)`. Points are an engagement mechanic, not a carbon credit. The UI must never label the scenario as carbon *actually saved*.
 
 ## Decisions and tradeoffs
 

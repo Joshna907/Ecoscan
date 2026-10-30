@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
-import type { AnalysisResponse, ConfirmScanRequest, ConfirmScanResponse } from 'shared'
+import type { AnalysisResponse, ClothingCategory, ConfirmScanRequest, ConfirmScanResponse } from 'shared'
 import { api, ApiError, messageOf } from '../lib/api'
 
 const pendingKey = 'ecoscan.pending-analysis'
 function remembered() { try { return sessionStorage.getItem(pendingKey) } catch { return null } }
 function remember(id: string | null) { try { if (id) sessionStorage.setItem(pendingKey, id); else sessionStorage.removeItem(pendingKey) } catch { /* Storage is optional. */ } }
 export type Phase = 'upload' | 'uploading' | 'queued' | 'processing' | 'paused' | 'review' | 'confirming' | 'complete' | 'failed'
-export type DraftItem = ConfirmScanRequest['items'][number] & { key: string }
+export type DraftItem = { key: string; category: ClothingCategory | ''; quantity: number }
 export function useScan(onConfirmed: () => void) {
   const [pendingId, setPendingId] = useState(remembered)
   const [phase, setPhase] = useState<Phase>(() => remembered() ? 'queued' : 'upload')
@@ -78,7 +78,11 @@ export function useScan(onConfirmed: () => void) {
   async function confirm() {
     if (!analysis || replaces === null || busy.current) return false
     const current = generation.current
-    const input = confirmation ?? { analysisId: analysis.analysisId, items: items.map(({ category, quantity }) => ({ category, quantity })), replacesPlannedNewPurchase: replaces }
+    const input = confirmation ?? {
+      analysisId: analysis.analysisId,
+      items: items.map(({ category, quantity }) => ({ category: category as ClothingCategory, quantity })),
+      replacesPlannedNewPurchase: replaces,
+    }
     busy.current = true; setConfirmation(input); setPhase('confirming'); setError('')
     try {
       const value = await api.confirm(input)

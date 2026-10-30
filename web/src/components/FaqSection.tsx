@@ -7,11 +7,11 @@ const questions = [
   },
   {
     question: 'What if EcoScan identifies an item incorrectly?',
-    answer: 'You can change the category, quantity, or item list before confirming a scan. In demo recognition mode, every photo gets an example T-shirt suggestion rather than a real identification.',
+    answer: 'You can change the category, quantity, or item list before confirming a scan and still receive an estimate. Because edited or manual entries cannot be verified from the photo, they do not earn points. A clearly labelled mock suggestion also earns no points.',
   },
   {
     question: 'How do I earn demo points?',
-    answer: 'If wearing an item again replaces a new purchase you planned, the demo treats half its estimated production footprint as potentially avoided and awards 10 points per kg. If it does not replace a purchase, the scan awards zero points.',
+    answer: 'An unchanged live AI suggestion can earn demo points when it replaces a new purchase you had already planned. Each image can earn only once per session or account. Edited, manual, duplicate, mock, or non-replacement scans still show an estimate but earn zero points.',
   },
   {
     question: 'Can I redeem these offers in a real shop?',
@@ -19,7 +19,7 @@ const questions = [
   },
   {
     question: 'What happens to my photo?',
-    answer: 'When AI recognition is enabled, EcoScan sends the photo to OpenAI for analysis. Queued photos are stored temporarily and deleted after processing, final failure, or expiry within one day. Camera access stops when you finish or close it.',
+    answer: 'When AI recognition is enabled, EcoScan sends the photo to OpenAI for analysis. EcoScan deletes its temporary queued copy after processing, final failure, or expiry within one day, but keeps a one-way image hash to prevent duplicate points in the session or account. OpenAI may retain API content in abuse-monitoring logs for up to 30 days by default. Do not upload people, documents, or sensitive information.',
   },
   {
     question: 'Will my result and points still be here later?',
