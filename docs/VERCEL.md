@@ -1,23 +1,37 @@
-# Deploy the EcoScan site on Vercel
+# Deploy EcoScan on Vercel and Neon
 
-Vercel builds and serves the React site from this repository. The root [`vercel.mjs`](../vercel.mjs) forwards `/api/*` requests to a separate HTTPS backend. This keeps the browser on one origin, so existing login and anonymous-session cookies work without a cross-origin frontend change.
+Vercel serves the Vite site and runs one Express function in `api/index.ts`. The function imports the existing application from `backend/src/` and uses Neon PostgreSQL for accounts, sessions, estimates, and rewards. Photo recognition completes within the upload request on this hosting option, so no continuous worker is required. The separate Docker/Render deployment continues to use its queued worker.
 
-## What you need
+## Prepare Neon
 
-1. A Vercel account with access to this GitHub repository.
-2. An already-running EcoScan API **and worker** reachable through a public HTTPS origin. Both must use the same migrated PostgreSQL database. The [production Compose guide](DEPLOYMENT.md) describes this backend stack; hosting it is a separate decision and may cost money.
-3. The backend origin, for example `https://api.example.com`. It must not contain `/api` or another path.
+1. Create a Neon project and copy its **direct** and **pooled** connection strings from the Connect panel. Keep both private.
+2. Apply the versioned schema migrations using the **direct** URL. The migration script uses a session-level advisory lock, which is incompatible with transaction pooling. In PowerShell, from the repository root:
 
-Vercel does **not** run the existing continuous worker or PostgreSQL service from a configuration file. Deploying only the site would leave scanning and account actions unavailable. The configuration therefore requires `API_ORIGIN` at build time.
+   ```powershell
+   $env:DATABASE_URL = Read-Host 'Paste the Neon direct URL'
+   npm run db:migrate -w api
+   Remove-Item Env:DATABASE_URL
+   ```
 
-## Vercel project settings
+3. The migration output should report the six SQL files on a fresh database. It is safe to run again; applied files are skipped.
 
-1. Import `Joshna907/Ecoscan` into Vercel.
-2. Keep **Root Directory** as the repository root (`.`), because `web` imports the sibling `shared` workspace.
-3. In **Settings → Environment Variables**, add `API_ORIGIN` with the public HTTPS backend origin for Production (and Preview only when a preview backend exists).
-4. Deploy. The repository's `vercel.mjs` selects Vite, runs `npm run build:web`, publishes `web/dist`, and proxies `/api/*`.
-5. Open the Vercel URL and check `/api/ready`. Then sign in, scan a photo, confirm its estimate, and check Results and Rewards.
+## Configure Vercel
 
-Do not add `OPENAI_API_KEY`, `DATABASE_URL`, or JWT secrets to Vercel for this frontend-only deployment. They belong on the backend host. If the backend is not available yet, keep using the local setup in the root README; a Vercel frontend deployment alone is not a functional EcoScan deployment.
+Keep the Vercel project Root Directory at `./`. The root `vercel.json` builds `web/dist`, routes `/api/*` to the function, and allows up to 60 seconds per function invocation.
 
-The existing React app uses hash routes, so no SPA fallback rewrite is needed. The API rewrite is deliberately not cached: account, points, and scan responses are personal data.
+In **Settings -> Environment Variables**, add these **Production** variables before deploying:
+
+| Variable | Value |
+| --- | --- |
+| `DATABASE_URL` | Neon **pooled** connection string |
+| `AUTH_JWT_SECRET` | A base64url-encoded 32-byte random value |
+| `RATE_LIMIT_HASH_KEY` | A different fresh random secret of at least 32 characters |
+| `VISION_PROVIDER` | `mock` for a no-cost demo; `openai` for live recognition |
+| `OPENAI_API_KEY` | Required only with `VISION_PROVIDER=openai` |
+| `NODE_ENV` | `production` |
+
+Generate the JWT secret locally with `node -e "console.log(require('node:crypto').randomBytes(32).toString('base64url'))"`. Generate the rate-limit key separately with `node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"`. Do not place database URLs or secrets in Git, frontend variables, or chat.
+
+Deploy the latest `main` commit. Check `/api/ready` on the Vercel URL, then sign up, scan a supported image, confirm the suggested items, refresh Results, and inspect Rewards. The Vercel flow returns suggestions directly from the upload request; no polling worker is involved. If a vision request exceeds the function or browser timeout, retry with a smaller image or switch to `mock` for the demo.
+
+The Neon pooled connection is for short application transactions. The direct connection is for migrations only. The Vercel function keeps a small pool per warm instance; database concurrency and function duration are bounded by the free plans.

@@ -20,7 +20,7 @@
   },
   "workspaces": [
     "web",
-    "api",
+    "backend",
     "shared"
   ],
   "private": true

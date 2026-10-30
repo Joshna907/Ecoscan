@@ -8,17 +8,17 @@ From PowerShell:
 
 ```powershell
 Set-Location C:\Users\dell\Desktop\ecoscan
-Copy-Item api\.env.example api\.env
-notepad api\.env
+Copy-Item backend\.env.example backend\.env
+notepad backend\.env
 ```
 
-In `api/.env`, leave `VISION_PROVIDER=openai` and enter your own API key after `OPENAI_API_KEY=`. Save the file, then start the backend:
+In `backend/.env`, leave `VISION_PROVIDER=openai` and enter your own API key after `OPENAI_API_KEY=`. Save the file, then start the backend:
 
 ```powershell
 npm run dev:api
 ```
 
-The key belongs only on the backend. Do not paste it into chat, put it in the React app, or commit `api/.env`; the root `.gitignore` excludes it. An OpenAI API key is separate from a ChatGPT subscription and API usage may be billed. The default model is `gpt-6-luna`; change `OPENAI_VISION_MODEL` only if your API project supports another vision and structured-output capable model.
+The key belongs only on the backend. Do not paste it into chat, put it in the React app, or commit `backend/.env`; the root `.gitignore` excludes it. An OpenAI API key is separate from a ChatGPT subscription and API usage may be billed. The default model is `gpt-6-luna`; change `OPENAI_VISION_MODEL` only if your API project supports another vision and structured-output capable model.
 
 ## What happens during a scan
 

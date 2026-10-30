@@ -21,6 +21,7 @@ import { ApplicationError, type ApplicationErrorCode } from './services/applicat
 import type { EcoScanStore } from './services/ports'
 import type { RecognitionJobs } from './services/recognitionJobs'
 import type { ScanRateControl, ScanUploadGate } from './routes/analysisRoutes'
+import { VisionAdmissionError, type PostgresVisionAdmission } from './services/visionAdmission'
 
 const applicationStatuses: Record<ApplicationErrorCode, number> = {
   INVALID_SCAN: 400, ANALYSIS_NOT_FOUND: 404, ANALYSIS_EXPIRED: 410,
@@ -36,6 +37,7 @@ interface AppOptions {
   logger?: LogSink
   store?: EcoScanStore
   jobs?: RecognitionJobs
+  visionAdmission?: Pick<PostgresVisionAdmission, 'acquire'>
   rateLimiter?: ScanRateControl & { cleanup(): void | Promise<void> }
   uploadGate?: ScanUploadGate
   readiness?: () => Promise<void>
@@ -52,7 +54,7 @@ export function createApp(recognizer: ClothingRecognizer = selectRecognizer(), o
   const rateLimiter = options.rateLimiter ?? new ScanRateLimiter(config, options.now)
   const gate = options.uploadGate ?? new ScanConcurrencyGate(config.maxConcurrentScans)
   const resolveSession = createSessionContext(sessions, options.auth)
-  const analyses = new AnalysisService(sessions, recognizer, options.jobs)
+  const analyses = new AnalysisService(sessions, recognizer, options.jobs, options.visionAdmission)
   const scans = new ScanService(sessions)
   const offers = new OfferService(sessions)
 
@@ -112,6 +114,19 @@ export function createApp(recognizer: ClothingRecognizer = selectRecognizer(), o
         error: {
           code: 'VISION_UNAVAILABLE',
           message: 'Image recognition is temporarily unavailable. Please try again.',
+        },
+      })
+      return
+    }
+    if (error instanceof VisionAdmissionError) {
+      response.locals.errorCode = error.code
+      response.setHeader('Retry-After', error.code === 'VISION_BUSY' ? 30 : 3600)
+      response.status(error.code === 'VISION_BUSY' ? 503 : 429).json({
+        error: {
+          code: error.code,
+          message: error.code === 'VISION_BUSY'
+            ? 'Image recognition is busy. Please try again shortly.'
+            : 'The daily image recognition limit has been reached. Please try again later.',
         },
       })
       return

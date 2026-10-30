@@ -11,7 +11,7 @@ Browser <- JSON  <- Result
 
 ## What each part does
 
-| File under api/src | Job |
+| File under backend/src | Job |
 | --- | --- |
 | routes/analysisRoutes.ts | Receive and validate the uploaded file; enforce admission controls and release reservations |
 | routes/scanRoutes.ts | Pass a confirmation request to ScanService and send its response |
@@ -48,4 +48,4 @@ The tradeoff is more files and some wiring for a small application. Keeping thre
 
 This remains one backend codebase. In-memory mode clears state on restart. PostgreSQL mode persists balances, scans, and redemptions and coordinates those updates across app copies with transactions. Recognition jobs run in a separate worker, and PostgreSQL coordinates upload, IP, and recognition limits across copies. The Compose example still runs one API copy; a multi-copy deployment needs a load balancer and measurement.
 
-The existing HTTP tests remain, and api/tests/services.test.ts tests workflows directly, including retries, ownership, failed calculations, returned-data isolation, competing redemptions, and cancellation. Run npm test and npm run typecheck from the project root. These checks use local recognizers and do not verify live OpenAI recognition.
+The existing HTTP tests remain, and backend/tests/services.test.ts tests workflows directly, including retries, ownership, failed calculations, returned-data isolation, competing redemptions, and cancellation. Run npm test and npm run typecheck from the project root. These checks use local recognizers and do not verify live OpenAI recognition.

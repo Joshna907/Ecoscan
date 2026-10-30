@@ -57,7 +57,7 @@ Capacity responses include a suggested `Retry-After` delay; it does not guarante
 
 ## Settings
 
-Set these optional variables in `api/.env`. Restart the backend to apply changes. Defaults are initial demo settings, not measured production capacity. All listed values must be positive integers. PostgreSQL mode additionally requires `RATE_LIMIT_HASH_KEY`, a secret of at least 32 characters shared by all API copies.
+Set these optional variables in `backend/.env`. Restart the backend to apply changes. Defaults are initial demo settings, not measured production capacity. All listed values must be positive integers. PostgreSQL mode additionally requires `RATE_LIMIT_HASH_KEY`, a secret of at least 32 characters shared by all API copies.
 
 | Variable | Default | Meaning |
 | --- | ---: | --- |
@@ -85,7 +85,7 @@ Logs do not contain request bodies, images, filenames, API keys, cookies, IP add
 
 ## Code map
 
-| File under `api/src` | Responsibility |
+| File under `backend/src` | Responsibility |
 | --- | --- |
 | `config.ts` | Defaults and validated environment settings |
 | `store/demoSessions.ts` | In-memory session storage and synchronous state changes |

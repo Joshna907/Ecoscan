@@ -43,12 +43,12 @@ PostgreSQL is available at `localhost:5433`. `compose.yaml` uses local developme
 ### 2. Configure the API
 
 ```powershell
-Copy-Item api/.env.example api/.env
+Copy-Item backend/.env.example backend/.env
 node -e "console.log(require('node:crypto').randomBytes(32).toString('base64url'))"
 node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
 ```
 
-Edit `api/.env`: set `AUTH_JWT_SECRET` to the first generated value and `RATE_LIMIT_HASH_KEY` to the second. Keep `DATA_STORE=postgres` and the example `DATABASE_URL` for local Docker. For an offline demo, set `VISION_PROVIDER=mock`. For actual photo recognition, keep `VISION_PROVIDER=openai` and add your key as `OPENAI_API_KEY`; see [OpenAI setup](docs/OPENAI_SETUP.md). **Never commit `api/.env` or put the key in frontend code.**
+Edit `backend/.env`: set `AUTH_JWT_SECRET` to the first generated value and `RATE_LIMIT_HASH_KEY` to the second. Keep `DATA_STORE=postgres` and the example `DATABASE_URL` for local Docker. For an offline demo, set `VISION_PROVIDER=mock`. For actual photo recognition, keep `VISION_PROVIDER=openai` and add your key as `OPENAI_API_KEY`; see [OpenAI setup](docs/OPENAI_SETUP.md). **Never commit `backend/.env` or put the key in frontend code.**
 
 ### 3. Apply migrations and start the app
 
@@ -66,7 +66,7 @@ Open three terminals in the repository root:
 
 Vite proxies `/api` to the API in development, preserving same-origin cookies. In PostgreSQL mode, an upload returns a queued analysis; the worker makes it ready for review. If an analysis remains queued, check terminal 2. `GET /api/health` checks the process; `GET /api/ready` also checks its database connection.
 
-**Without Docker:** set `DATA_STORE=memory`, `VISION_PROVIDER=mock`, and leave `DATABASE_URL` empty in `api/.env`. Run only the API and web terminals. This mode has no accounts, processes recognition during upload, and loses all state on restart.
+**Without Docker:** set `DATA_STORE=memory`, `VISION_PROVIDER=mock`, and leave `DATABASE_URL` empty in `backend/.env`. Run only the API and web terminals. This mode has no accounts, processes recognition during upload, and loses all state on restart.
 
 ## Run the checks
 
@@ -90,7 +90,7 @@ Tests create and clean up their own rows. Never point `TEST_DATABASE_URL` at pro
 
 ## Carbon and reward assumptions
 
-The versioned [`demo-v1` catalogue](api/src/domain/carbonCatalogue.ts) stores placeholder production values for a comparable new item:
+The versioned [`demo-v1` catalogue](backend/src/domain/carbonCatalogue.ts) stores placeholder production values for a comparable new item:
 
 | Item | Estimated production |
 | --- | ---: |
@@ -99,7 +99,7 @@ The versioned [`demo-v1` catalogue](api/src/domain/carbonCatalogue.ts) stores pl
 | Jacket | 15 kg CO₂e |
 | Shoes | 8 kg CO₂e |
 
-The [calculation](api/src/domain/calculateEstimate.ts) multiplies each value by the confirmed quantity and sums the items. When the user selects the planned-purchase comparison, `possible avoided production = total × 0.5`; otherwise it is zero. `demo points = round(possible avoided kg CO₂e × 10)`.
+The [calculation](backend/src/domain/calculateEstimate.ts) multiplies each value by the confirmed quantity and sums the items. When the user selects the planned-purchase comparison, `possible avoided production = total × 0.5`; otherwise it is zero. `demo points = round(possible avoided kg CO₂e × 10)`.
 
 For example, one T-shirt gives a **5 kg CO₂e production estimate**, a **2.5 kg CO₂e hypothetical avoided-production scenario**, and **25 demo points** when that comparison is selected. The 50% factor and point rate are assumptions, not verified savings. The image model only suggests categories; it never assigns a carbon value or points. The fictional offers cost 25, 60, and 100 points. Redeeming one deducts demo points and creates a sample receipt without partner fulfilment.
 
@@ -108,13 +108,14 @@ For example, one T-shirt gives a **5 kg CO₂e production estimate**, a **2.5 kg
 | Directory | Responsibility |
 | --- | --- |
 | `web/src/` | React pages, camera/upload journey, results, rewards, and account UI |
-| `api/src/routes/` | HTTP validation and responses |
-| `api/src/services/` | Scan, recognition-job, auth, and offer workflows |
-| `api/src/domain/` | Carbon, points, and offer rules |
-| `api/src/store/` | Memory and PostgreSQL adapters |
-| `api/db/` | Versioned SQL migrations |
+| `api/index.ts` | Vercel function entry point |
+| `backend/src/routes/` | HTTP validation and responses |
+| `backend/src/services/` | Scan, recognition-job, auth, and offer workflows |
+| `backend/src/domain/` | Carbon, points, and offer rules |
+| `backend/src/store/` | Memory and PostgreSQL adapters |
+| `backend/db/` | Versioned SQL migrations |
 | `shared/src/` | Request and response schemas used by API and web |
-| `api/tests/`, `web/tests/` | Backend and frontend tests |
+| `backend/tests/`, `web/tests/` | Backend and frontend tests |
 
 The API is a modular application rather than a collection of microservices. PostgreSQL stores accounts, revocable JWT login sessions, balances, redemptions, the latest confirmed estimate, and recognition jobs. Confirmation and redemption use transactions to protect points from retries and concurrent requests. Workers use leases and shared limits. Photos are temporarily kept in PostgreSQL until processing or expiry; this keeps the initial deployment simple but increases database size and backup exposure. See [architecture](docs/ARCHITECTURE.md) and [backend reliability](docs/BACKEND_RELIABILITY.md).
 
@@ -129,7 +130,7 @@ The root [Blueprint](render.yaml) creates a **web service, background worker, an
 
 The Blueprint uses live OpenAI recognition, which needs a valid key and API billing. To create an explicitly mock-only preview, set `VISION_PROVIDER=mock` on **both** Render services and redeploy. No live deployment URL is claimed until a deployment is verified. Read [Render deployment details](docs/RENDER.md) for checks and operational limits. [Compose deployment](docs/DEPLOYMENT.md) is a separate backend-only, self-hosted option.
 
-**Vercel site option:** [Deploy the React site on Vercel](docs/VERCEL.md) using `vercel.mjs`. It requires a separately hosted HTTPS API, worker, and PostgreSQL database; Vercel alone does not run this backend.
+**Vercel and Neon option:** [Deploy the full demo](docs/VERCEL.md) using `vercel.json`, the `api/index.ts` function, and Neon PostgreSQL. On this hosting option, photo recognition runs within the upload request rather than a continuous worker. Apply migrations through Neon's direct connection; configure the Vercel function with its pooled connection.
 
 ## Improvements beyond the prototype
 

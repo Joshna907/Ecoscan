@@ -5,6 +5,7 @@ import type { EcoScanStore } from './ports'
 import type { ClothingRecognizer } from './vision/types'
 import type { RecognitionJobs } from './recognitionJobs'
 import { ApplicationError } from './applicationError'
+import type { PostgresVisionAdmission } from './visionAdmission'
 
 interface AnalysisContext {
   isCancelled?: () => boolean
@@ -22,6 +23,7 @@ export class AnalysisService {
     private readonly store: Pick<EcoScanStore, 'reserveUpload' | 'addAnalysis'>,
     private readonly recognizer: ClothingRecognizer,
     private readonly jobs?: Pick<RecognitionJobs, 'enqueue' | 'status'>,
+    private readonly visionAdmission?: Pick<PostgresVisionAdmission, 'acquire'>,
   ) {}
 
   // Reserve before transport buffers an upload; caller releases in finally.
@@ -46,10 +48,13 @@ export class AnalysisService {
     const started = performance.now()
     let outcome: 'success' | 'failure' = 'failure'
     let suggestions
+    const permit = await this.visionAdmission?.acquire()
     try {
+      permit?.markUsed()
       suggestions = await this.recognizer.recognize(image, mimeType)
       outcome = 'success'
     } finally {
+      await permit?.release()
       context.onRecognitionFinished?.({ mode: this.recognizer.mode, outcome, durationMs: Math.round(performance.now() - started) })
     }
     if (context.isCancelled?.()) return
