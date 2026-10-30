@@ -5,10 +5,11 @@ import { OfferService } from '../src/services/offerService'
 import { DemoSessionStore } from '../src/store/demoSessions'
 import { mockRecognizer } from '../src/services/vision/mockRecognizer'
 import { reliabilityConfigSchema } from '../src/config'
+import { verifiedRecognizer } from './helpers'
 
 async function setup() {
   const store = new DemoSessionStore()
-  const analyses = new AnalysisService(store, mockRecognizer)
+  const analyses = new AnalysisService(store, verifiedRecognizer)
   const scans = new ScanService(store)
   const offers = new OfferService(store)
   const sessionId = await store.getOrCreate(undefined)
@@ -56,7 +57,7 @@ describe('application workflows without HTTP', () => {
   it('recognizes, confirms, replays and redeems through services alone', async () => {
     const { analyses, scans, offers, sessionId } = await setup()
     const analysis = await analyse(analyses, sessionId)
-    expect(analysis.recognitionMode).toBe('mock')
+    expect(analysis.recognitionMode).toBe('vision')
     const input = confirmation(analysis.analysisId)
     const original = await scans.confirm(sessionId, input)
     expect(original.demoPointsBalance).toBe(100)

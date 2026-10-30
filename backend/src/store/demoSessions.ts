@@ -2,12 +2,11 @@ import { randomBytes, randomUUID } from 'node:crypto'
 import { confirmScanResponseSchema, type ConfirmScanResponse, type ScanEstimate } from '../../../shared/src/index.js'
 import { reliabilityConfigSchema, type ReliabilityConfig } from '../config.js'
 import { ApplicationError } from '../services/applicationError.js'
-import type { EcoScanStore, RewardSnapshot } from '../services/ports.js'
-import type { RecognitionSuggestion } from '../services/vision/types.js'
+import type { AnalysisEvidence, EcoScanStore, RewardSnapshot } from '../services/ports.js'
 
 interface AnalysisBase { id: string; createdAt: number }
 type AnalysisRecord = AnalysisBase & (
-  | { status: 'awaiting_review'; expiresAt: number; suggestions: RecognitionSuggestion[] }
+  | { status: 'awaiting_review'; expiresAt: number; evidence: Omit<AnalysisEvidence, 'duplicateImage'> }
   | { status: 'confirmed'; expiresAt: number; fingerprint: string; result: ConfirmScanResponse }
   | { status: 'expired'; expiresAt: number }
 )
@@ -20,6 +19,7 @@ interface DemoSession {
   demoPointsBalance: number
   latestResult: ConfirmScanResponse | null
   redemptions: Map<string, { reference: string; redeemedAt: string }>
+  rewardedImageHashes: Set<string>
 }
 
 export class DemoSessionStore implements EcoScanStore {
@@ -65,6 +65,7 @@ export class DemoSessionStore implements EcoScanStore {
       demoPointsBalance: 0,
       latestResult: null,
       redemptions: new Map(),
+      rewardedImageHashes: new Set(),
     }
     this.sessions.set(session.id, session)
     return session.id
@@ -93,15 +94,15 @@ export class DemoSessionStore implements EcoScanStore {
     }
   }
 
-  async addAnalysis(sessionId: string, id: string, suggestions: RecognitionSuggestion[]): Promise<void> {
+  async addAnalysis(sessionId: string, id: string, evidence: Omit<AnalysisEvidence, 'duplicateImage'>): Promise<void> {
     const session = await this.requireSession(sessionId)
     session.analyses.set(id, {
       id, status: 'awaiting_review', createdAt: this.now(),
-      expiresAt: this.now() + this.config.analysisTtlMs, suggestions: structuredClone(suggestions),
+      expiresAt: this.now() + this.config.analysisTtlMs, evidence: structuredClone(evidence),
     })
   }
 
-  async confirmOnce(sessionId: string, analysisId: string, fingerprint: string, estimate: () => ScanEstimate): Promise<ConfirmScanResponse> {
+  async confirmOnce(sessionId: string, analysisId: string, fingerprint: string, estimate: (evidence: AnalysisEvidence) => ScanEstimate): Promise<ConfirmScanResponse> {
     const session = await this.requireSession(sessionId)
     const record = session.analyses.get(analysisId)
     if (!record) throw new ApplicationError('ANALYSIS_NOT_FOUND', 'This analysis is unavailable. Upload an image again.')
@@ -113,7 +114,10 @@ export class DemoSessionStore implements EcoScanStore {
       return structuredClone(record.result)
     }
     // Validate before mutation. No await separates the state check, award, and saved result.
-    const calculated = estimate()
+    const calculated = estimate({
+      ...record.evidence,
+      duplicateImage: !!record.evidence.imageHash && session.rewardedImageHashes.has(record.evidence.imageHash),
+    })
     const result = confirmScanResponseSchema.parse({
       ...calculated, demoPointsBalance: session.demoPointsBalance + calculated.demoPointsAwarded,
     })
@@ -123,6 +127,7 @@ export class DemoSessionStore implements EcoScanStore {
       fingerprint, result,
     })
     session.demoPointsBalance = result.demoPointsBalance
+    if (result.demoPointsAwarded > 0 && record.evidence.imageHash) session.rewardedImageHashes.add(record.evidence.imageHash)
     session.latestResult = structuredClone(result)
     return structuredClone(result)
   }

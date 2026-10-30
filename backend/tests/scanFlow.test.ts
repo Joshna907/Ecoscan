@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import request from 'supertest'
-import { createTestApp as createApp } from './helpers'
+import { createTestApp as createApp, verifiedRecognizer } from './helpers'
 
 const PNG_1X1 = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/lXcAAAAASUVORK5CYII=',
@@ -17,7 +17,7 @@ async function uploadDemoImage(agent: ReturnType<typeof request.agent>) {
 
 describe('reviewed scan and demo offers', () => {
   it('calculates corrected items, awards points once, and redeems the selected offer cost', async () => {
-    const agent = request.agent(createApp())
+    const agent = request.agent(createApp(verifiedRecognizer))
     const initially = await agent.get('/api/offers').expect(200)
     expect(initially.body.demoPointsBalance).toBe(0)
     expect(initially.body.offers.every((offer: { canRedeem: boolean }) => !offer.canRedeem)).toBe(true)
@@ -36,7 +36,8 @@ describe('reviewed scan and demo offers', () => {
       scenarioPotentialAvoidedKgCo2e: 10,
       demoPointsAwarded: 100,
       demoPointsBalance: 100,
-      assumptionsVersion: 'demo-v1',
+      rewardStatus: 'awarded',
+      assumptionsVersion: 'demo-v2',
     })
     expect((await agent.get('/api/scans/latest').expect(200)).body.result).toEqual(scan.body)
 
@@ -69,6 +70,25 @@ describe('reviewed scan and demo offers', () => {
     expect((await agent.get('/api/scans/latest').expect(200)).body.result).toEqual(newerScan.body)
   })
 
+  it('awards an identical image only once', async () => {
+    const agent = request.agent(createApp(verifiedRecognizer))
+    const firstId = await uploadDemoImage(agent)
+    const first = await agent.post('/api/scans/confirm').send({
+      analysisId: firstId,
+      items: [{ category: 'jeans', quantity: 2 }],
+      replacesPlannedNewPurchase: true,
+    }).expect(200)
+    expect(first.body).toMatchObject({ demoPointsAwarded: 100, demoPointsBalance: 100, rewardStatus: 'awarded' })
+
+    const secondId = await uploadDemoImage(agent)
+    const second = await agent.post('/api/scans/confirm').send({
+      analysisId: secondId,
+      items: [{ category: 'jeans', quantity: 2 }],
+      replacesPlannedNewPurchase: true,
+    }).expect(200)
+    expect(second.body).toMatchObject({ demoPointsAwarded: 0, demoPointsBalance: 100, rewardStatus: 'duplicate_image' })
+  })
+
   it('does not accept an analysis from a different browser session', async () => {
     const app = createApp()
     const owner = request.agent(app)
@@ -96,6 +116,14 @@ describe('reviewed scan and demo offers', () => {
     }).expect(400)
     expect(invalid.body.error.code).toBe('INVALID_SCAN')
     expect((await agent.get('/api/offers').expect(200)).body.demoPointsBalance).toBe(0)
+
+    const tooManyId = await uploadDemoImage(agent)
+    const tooMany = await agent.post('/api/scans/confirm').send({
+      analysisId: tooManyId,
+      items: [{ category: 'tshirt', quantity: 10 }, { category: 'jeans', quantity: 1 }],
+      replacesPlannedNewPurchase: true,
+    }).expect(400)
+    expect(tooMany.body.error.code).toBe('INVALID_SCAN')
   })
 
   it('reports malformed JSON as a client error', async () => {

@@ -25,6 +25,6 @@ export class ScanService {
       items: [...totals.entries()].sort(([a], [b]) => a.localeCompare(b)),
       replacesPlannedNewPurchase: request.replacesPlannedNewPurchase,
     })
-    return this.store.confirmOnce(sessionId, request.analysisId, fingerprint, () => calculateEstimate(request))
+    return this.store.confirmOnce(sessionId, request.analysisId, fingerprint, (evidence) => calculateEstimate(request, evidence))
   }
 }

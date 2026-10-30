@@ -2,7 +2,7 @@ import type { ClothingCategory } from '../../../shared/src/index.js'
 
 // Illustrative values from the take-home brief, in kg CO2e per comparable new item.
 // Replace only when a sourced lifecycle dataset and its uncertainty are documented.
-export const ASSUMPTIONS_VERSION = 'demo-v1' as const
+export const ASSUMPTIONS_VERSION = 'demo-v2' as const
 export const PRODUCTION_KG_CO2E: Readonly<Record<ClothingCategory, number>> = {
   tshirt: 5,
   jeans: 10,

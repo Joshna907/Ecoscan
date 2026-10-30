@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import request from 'supertest'
-import { createTestApp, PNG_1X1 } from './helpers'
+import { createTestApp, PNG_1X1, verifiedRecognizer } from './helpers'
 import { mockRecognizer } from '../src/services/vision/mockRecognizer'
 import { VisionUnavailableError } from '../src/services/vision/openAIRecognizer'
 import type { RecognitionSuggestion } from '../src/services/vision/types'
@@ -18,7 +18,7 @@ const confirmation = (analysisId: string) => ({
 
 describe('scan lifecycle and safe retries', () => {
   it('awards once for simultaneous equivalent confirmations and rejects a conflicting retry', async () => {
-    const agent = request.agent(createTestApp())
+    const agent = request.agent(createTestApp(verifiedRecognizer))
     const { body } = await upload(agent).expect(200)
     const input = confirmation(body.analysisId)
     const [first, second] = await Promise.all([
@@ -37,7 +37,7 @@ describe('scan lifecycle and safe retries', () => {
 
   it('returns 410 for an expired review and never awards points', async () => {
     let now = 0
-    const app = createTestApp(undefined, { now: () => now, config: { analysisTtlMs: 100 } })
+    const app = createTestApp(verifiedRecognizer, { now: () => now, config: { analysisTtlMs: 100 } })
     const agent = request.agent(app)
     const { body } = await upload(agent).expect(200)
     now = 100
@@ -49,7 +49,7 @@ describe('scan lifecycle and safe retries', () => {
 
   it('removes retained results without making their IDs eligible for another award', async () => {
     let now = 0
-    const agent = request.agent(createTestApp(undefined, { now: () => now, config: { resultRetentionMs: 100 } }))
+    const agent = request.agent(createTestApp(verifiedRecognizer, { now: () => now, config: { resultRetentionMs: 100 } }))
     const { body } = await upload(agent).expect(200)
     await agent.post('/api/scans/confirm').send(confirmation(body.analysisId)).expect(200)
     now = 100
@@ -59,7 +59,7 @@ describe('scan lifecycle and safe retries', () => {
 
   it('expires idle sessions, rejects their analyses and clears their demo balance', async () => {
     let now = 0
-    const agent = request.agent(createTestApp(undefined, { now: () => now, config: { sessionTtlMs: 100 } }))
+    const agent = request.agent(createTestApp(verifiedRecognizer, { now: () => now, config: { sessionTtlMs: 100 } }))
     const { body } = await upload(agent).expect(200)
     await agent.post('/api/scans/confirm').send(confirmation(body.analysisId)).expect(200)
     now = 100

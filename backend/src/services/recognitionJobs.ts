@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import { Pool, type PoolClient } from 'pg'
 import { analysisJobStatusSchema, analysisResponseSchema, type AnalysisJobStatus, type AnalysisResponse } from '../../../shared/src/index.js'
 import type { ReliabilityConfig } from '../config.js'
@@ -45,6 +45,7 @@ export class PostgresRecognitionJobs implements RecognitionJobs {
 
   async enqueue(sessionId: string, image: Buffer, mimeType: string): Promise<{ analysisId: string; status: 'queued' }> {
     const analysisId = randomUUID()
+    const imageHash = createHash('sha256').update(image).digest('hex')
     await this.transaction(async (client) => {
       // Serialize admission across API copies so the database image budget is bounded.
       await client.query('SELECT pg_advisory_xact_lock(17028103)')
@@ -54,7 +55,7 @@ export class PostgresRecognitionJobs implements RecognitionJobs {
       }
       const session = await client.query('SELECT 1 FROM eco_sessions WHERE id = $1 FOR UPDATE', [sessionId])
       if (!session.rowCount) throw new ApplicationError('SESSION_EXPIRED', 'This demo session expired. Start a new scan.')
-      await client.query(`INSERT INTO eco_analyses(id, session_id, status, expires_at) VALUES ($1, $2, 'queued', now() + interval '1 day')`, [analysisId, sessionId])
+      await client.query(`INSERT INTO eco_analyses(id, session_id, status, expires_at, image_hash) VALUES ($1, $2, 'queued', now() + interval '1 day', $3)`, [analysisId, sessionId, imageHash])
       await client.query(`INSERT INTO eco_recognition_jobs(analysis_id, image, mime_type, status) VALUES ($1, $2, $3, 'queued')`, [analysisId, image, mimeType])
     })
     return { analysisId, status: 'queued' }

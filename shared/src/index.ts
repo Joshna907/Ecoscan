@@ -26,13 +26,16 @@ export type AnalysisJobStatus = z.infer<typeof analysisJobStatusSchema>
 
 export const confirmedItemSchema = z.object({
   category: clothingCategorySchema,
-  quantity: z.number().int().min(1).max(20),
+  quantity: z.number().int().min(1).max(10),
 })
 
 export const confirmScanRequestSchema = z.object({
   analysisId: z.string().min(1),
-  items: z.array(confirmedItemSchema).min(1).max(20),
+  items: z.array(confirmedItemSchema).min(1).max(10),
   replacesPlannedNewPurchase: z.boolean(),
+}).superRefine((value, context) => {
+  const total = value.items.reduce((sum, item) => sum + item.quantity, 0)
+  if (total > 10) context.addIssue({ code: 'custom', path: ['items'], message: 'A scan can contain at most 10 items.' })
 })
 
 export type ConfirmScanRequest = z.infer<typeof confirmScanRequestSchema>
@@ -46,7 +49,8 @@ export const scanEstimateSchema = z.object({
   totalEstimatedProductionKgCo2e: z.number().nonnegative(),
   scenarioPotentialAvoidedKgCo2e: z.number().nonnegative(),
   demoPointsAwarded: z.number().int().nonnegative(),
-  assumptionsVersion: z.literal('demo-v1'),
+  rewardStatus: z.enum(['awarded', 'not_replacing', 'unverified_items', 'duplicate_image']).optional(),
+  assumptionsVersion: z.enum(['demo-v1', 'demo-v2']),
 })
 
 export type ScanEstimate = z.infer<typeof scanEstimateSchema>

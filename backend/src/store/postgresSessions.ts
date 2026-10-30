@@ -1,12 +1,20 @@
 import { randomBytes, randomUUID } from 'node:crypto'
 import { Pool, type PoolClient } from 'pg'
-import { confirmScanResponseSchema, type AnalysisResponse, type ConfirmScanResponse, type ScanEstimate } from '../../../shared/src/index.js'
+import { analysisResponseSchema, confirmScanResponseSchema, type ConfirmScanResponse, type ScanEstimate } from '../../../shared/src/index.js'
 import type { ReliabilityConfig } from '../config.js'
 import { ApplicationError } from '../services/applicationError.js'
-import type { EcoScanStore, RewardSnapshot } from '../services/ports.js'
+import type { AnalysisEvidence, EcoScanStore, RewardSnapshot } from '../services/ports.js'
 
 type SessionRow = { id: string; demo_points_balance: number }
-type AnalysisRow = { status: string; fingerprint: string | null; result: unknown; expires_at: Date }
+type AnalysisRow = {
+  status: string
+  fingerprint: string | null
+  result: unknown
+  expires_at: Date
+  suggestions: unknown
+  recognition_mode: string | null
+  image_hash: string | null
+}
 
 // The session row is the lock for every balance change in that session.
 export class PostgresSessionStore implements EcoScanStore {
@@ -84,14 +92,14 @@ export class PostgresSessionStore implements EcoScanStore {
     }
   }
 
-  async addAnalysis(sessionId: string, id: string, suggestions: AnalysisResponse['suggestions']): Promise<void> {
-    await this.pool.query(`INSERT INTO eco_analyses(id, session_id, status, expires_at, suggestions) VALUES ($1, $2, 'awaiting_review', now() + ($3::bigint * interval '1 millisecond'), $4::jsonb)`, [id, sessionId, this.config.analysisTtlMs, JSON.stringify(suggestions)])
+  async addAnalysis(sessionId: string, id: string, evidence: Omit<AnalysisEvidence, 'duplicateImage'>): Promise<void> {
+    await this.pool.query(`INSERT INTO eco_analyses(id, session_id, status, expires_at, suggestions, recognition_mode, image_hash) VALUES ($1, $2, 'awaiting_review', now() + ($3::bigint * interval '1 millisecond'), $4::jsonb, $5, $6)`, [id, sessionId, this.config.analysisTtlMs, JSON.stringify(evidence.suggestions), evidence.recognitionMode, evidence.imageHash])
   }
 
-  async confirmOnce(sessionId: string, analysisId: string, fingerprint: string, estimate: () => ScanEstimate): Promise<ConfirmScanResponse> {
+  async confirmOnce(sessionId: string, analysisId: string, fingerprint: string, estimate: (evidence: AnalysisEvidence) => ScanEstimate): Promise<ConfirmScanResponse> {
     return this.transaction(async (client) => {
       const session = await this.lockedSession(client, sessionId)
-      const found = await client.query<AnalysisRow>('SELECT status, fingerprint, result, expires_at FROM eco_analyses WHERE id = $1 AND session_id = $2 FOR UPDATE', [analysisId, sessionId])
+      const found = await client.query<AnalysisRow>('SELECT status, fingerprint, result, expires_at, suggestions, recognition_mode, image_hash FROM eco_analyses WHERE id = $1 AND session_id = $2 FOR UPDATE', [analysisId, sessionId])
       const record = found.rows[0]
       if (!record) throw new ApplicationError('ANALYSIS_NOT_FOUND', 'This analysis is unavailable. Upload an image again.')
       if (record.expires_at.getTime() <= Date.now()) {
@@ -107,8 +115,22 @@ export class PostgresSessionStore implements EcoScanStore {
         if (record.fingerprint !== fingerprint) throw new ApplicationError('CONFIRMATION_CONFLICT', 'This analysis was already confirmed with different items or a different comparison choice.')
         return confirmScanResponseSchema.parse(record.result)
       }
-      const calculated = estimate()
+      const duplicate = record.image_hash
+        ? (await client.query('SELECT 1 FROM eco_reward_claims WHERE session_id = $1 AND image_hash = $2', [sessionId, record.image_hash])).rowCount === 1
+        : false
+      const recognitionMode = record.recognition_mode === 'vision' || record.recognition_mode === 'mock'
+        ? record.recognition_mode
+        : null
+      const calculated = estimate({
+        suggestions: analysisResponseSchema.shape.suggestions.parse(record.suggestions),
+        recognitionMode,
+        imageHash: record.image_hash,
+        duplicateImage: duplicate,
+      })
       const result = confirmScanResponseSchema.parse({ ...calculated, demoPointsBalance: session.demo_points_balance + calculated.demoPointsAwarded })
+      if (result.demoPointsAwarded > 0 && record.image_hash) {
+        await client.query('INSERT INTO eco_reward_claims(session_id, image_hash, analysis_id) VALUES ($1, $2, $3)', [sessionId, record.image_hash, analysisId])
+      }
       await client.query(`UPDATE eco_analyses SET status = 'confirmed', expires_at = now() + ($1::bigint * interval '1 millisecond'), fingerprint = $2, result = $3::jsonb, suggestions = '[]'::jsonb WHERE id = $4`, [this.config.resultRetentionMs, fingerprint, JSON.stringify(result), analysisId])
       await client.query('UPDATE eco_sessions SET demo_points_balance = $1, latest_result = $2::jsonb WHERE id = $3', [result.demoPointsBalance, JSON.stringify(result), sessionId])
       return result

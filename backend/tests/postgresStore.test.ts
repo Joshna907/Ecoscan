@@ -43,7 +43,11 @@ databaseTests('PostgreSQL persistence across API copies', () => {
 
   it('keeps a confirmed scan and balance visible after switching store instances', async () => {
     const analysisId = randomUUID()
-    await first.addAnalysis(sessionId, analysisId, [{ id: 'item-1', category: 'jeans' }])
+    await first.addAnalysis(sessionId, analysisId, {
+      suggestions: [{ id: 'item-1', category: 'jeans' }, { id: 'item-2', category: 'jeans' }],
+      recognitionMode: 'vision',
+      imageHash: randomUUID(),
+    })
     const input = { analysisId, items: [{ category: 'jeans', quantity: 2 }], replacesPlannedNewPurchase: true }
     const [original, simultaneousReplay] = await Promise.all([
       new ScanService(first).confirm(sessionId, input),
@@ -96,7 +100,7 @@ databaseTests('PostgreSQL persistence across API copies', () => {
     expect(await new RecognitionWorker(jobs, mockRecognizer).runOne()).toBe(true)
     const ready = await browser.get(`/api/analyses/${id}`).expect(200)
     expect(ready.body).toMatchObject({ status: 'ready', analysisId: id, recognitionMode: 'mock', needsReview: true })
-    expect((await browser.post('/api/scans/confirm').send(input).expect(200)).body.demoPointsAwarded).toBe(25)
+    expect((await browser.post('/api/scans/confirm').send(input).expect(200)).body.demoPointsAwarded).toBe(0)
     expect((await browser.get(`/api/analyses/${id}`).expect(200)).body.status).toBe('confirmed')
     expect((await firstPool.query('SELECT 1 FROM eco_recognition_jobs WHERE analysis_id = $1', [id])).rowCount).toBe(0)
     const cookie = uploaded.headers['set-cookie']?.[0]?.split(';')[0]
