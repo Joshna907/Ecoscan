@@ -73,7 +73,11 @@ export function createApp(recognizer: ClothingRecognizer = selectRecognizer(), o
     try {
       await options.readiness?.()
       response.json({ status: 'ready' })
-    } catch {
+    } catch (error) {
+      const details = error instanceof Error
+        ? { name: error.name, message: error.message, code: (error as NodeJS.ErrnoException).code }
+        : { name: 'UnknownError', message: 'Unknown readiness failure' }
+      console.error(JSON.stringify({ event: 'readiness_failure', error: details }))
       response.locals.errorCode = 'NOT_READY'
       response.status(503).json({ error: { code: 'NOT_READY', message: 'The API is not ready to serve requests.' } })
     }
