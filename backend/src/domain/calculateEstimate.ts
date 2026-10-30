@@ -3,7 +3,7 @@ import {
   scanEstimateSchema,
   type ConfirmScanRequest,
   type ScanEstimate,
-} from 'shared'
+} from '../../../shared/src/index.js'
 import {
   ASSUMPTIONS_VERSION,
   DEMO_DISPLACEMENT_FACTOR,

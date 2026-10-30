@@ -1,5 +1,5 @@
 import { randomBytes, randomUUID } from 'node:crypto'
-import { confirmScanResponseSchema, type ConfirmScanResponse, type ScanEstimate } from 'shared'
+import { confirmScanResponseSchema, type ConfirmScanResponse, type ScanEstimate } from '../../../shared/src/index.js'
 import { reliabilityConfigSchema, type ReliabilityConfig } from '../config.js'
 import { ApplicationError } from '../services/applicationError.js'
 import type { EcoScanStore, RewardSnapshot } from '../services/ports.js'

@@ -1,4 +1,4 @@
-import type { ClothingCategory } from 'shared'
+import type { ClothingCategory } from '../../../../shared/src/index.js'
 
 export interface RecognitionSuggestion {
   id: string

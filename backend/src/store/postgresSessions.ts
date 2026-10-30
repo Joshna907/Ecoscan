@@ -1,6 +1,6 @@
 import { randomBytes, randomUUID } from 'node:crypto'
 import { Pool, type PoolClient } from 'pg'
-import { confirmScanResponseSchema, type AnalysisResponse, type ConfirmScanResponse, type ScanEstimate } from 'shared'
+import { confirmScanResponseSchema, type AnalysisResponse, type ConfirmScanResponse, type ScanEstimate } from '../../../shared/src/index.js'
 import type { ReliabilityConfig } from '../config.js'
 import { ApplicationError } from '../services/applicationError.js'
 import type { EcoScanStore, RewardSnapshot } from '../services/ports.js'

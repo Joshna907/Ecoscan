@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { performance } from 'node:perf_hooks'
-import { analysisResponseSchema, type AnalysisJobStatus, type AnalysisResponse } from 'shared'
+import { analysisResponseSchema, type AnalysisJobStatus, type AnalysisResponse } from '../../../shared/src/index.js'
 import type { EcoScanStore } from './ports.js'
 import type { ClothingRecognizer } from './vision/types.js'
 import type { RecognitionJobs } from './recognitionJobs.js'

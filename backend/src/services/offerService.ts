@@ -1,4 +1,4 @@
-import { offersResponseSchema, redeemOfferResponseSchema, type OffersResponse, type RedeemOfferResponse } from 'shared'
+import { offersResponseSchema, redeemOfferResponseSchema, type OffersResponse, type RedeemOfferResponse } from '../../../shared/src/index.js'
 import { DEMO_OFFERS } from '../domain/offerCatalogue.js'
 import { ApplicationError } from './applicationError.js'
 import type { EcoScanStore } from './ports.js'

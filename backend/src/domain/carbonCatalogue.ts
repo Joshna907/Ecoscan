@@ -1,4 +1,4 @@
-import type { ClothingCategory } from 'shared'
+import type { ClothingCategory } from '../../../shared/src/index.js'
 
 // Illustrative values from the take-home brief, in kg CO2e per comparable new item.
 // Replace only when a sourced lifecycle dataset and its uncertainty are documented.

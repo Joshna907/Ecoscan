@@ -1,4 +1,4 @@
-import { confirmScanRequestSchema, type ConfirmScanResponse } from 'shared'
+import { confirmScanRequestSchema, type ConfirmScanResponse } from '../../../shared/src/index.js'
 import { calculateEstimate } from '../domain/calculateEstimate.js'
 import { ApplicationError } from './applicationError.js'
 import type { EcoScanStore } from './ports.js'

@@ -1,4 +1,4 @@
-import type { AnalysisResponse, ConfirmScanResponse, DemoReceipt, ScanEstimate } from 'shared'
+import type { AnalysisResponse, ConfirmScanResponse, DemoReceipt, ScanEstimate } from '../../../shared/src/index.js'
 
 export interface RewardSnapshot {
   demoPointsBalance: number
