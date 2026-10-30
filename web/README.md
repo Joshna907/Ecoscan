@@ -53,7 +53,7 @@ The DOM tests use controlled API responses. They cover review and redemption, in
 
 ## Deployment
 
-`npm run build:web` creates `web/dist`. On Render, the Express web service serves those files and `/api` on the same HTTPS origin; `render.yaml` runs the API and recognition worker as separate services. The Vite development proxy is not part of the production build. The production Compose file remains a backend-only deployment. Never put an OpenAI key in Vite environment variables or frontend source.
+`npm run build:web` creates `web/dist`. Vercel serves those files and routes `/api` to the Express function on the same HTTPS origin. The Vite development proxy is not part of the production build. The production Compose file remains a backend-only deployment with a separate recognition worker. Never put an OpenAI key in Vite environment variables or frontend source.
 
 
 
