@@ -48,6 +48,7 @@ interface AppOptions {
 
 export function createApp(recognizer: ClothingRecognizer = selectRecognizer(), options: AppOptions = {}) {
   const app = express()
+  app.disable('x-powered-by')
   app.set('trust proxy', options.trustedProxyHops ?? 0)
   const config = reliabilityConfigSchema.parse(options.config ?? {})
   const sessions = options.store ?? new DemoSessionStore(config, options.now)

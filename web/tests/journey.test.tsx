@@ -16,7 +16,7 @@ const analysis = { analysisId: id, recognitionMode: 'mock' as const, needsReview
 const result = {
   items: [{ category: 'jeans' as const, quantity: 2, estimatedProductionKgCo2e: 20 }],
   totalEstimatedProductionKgCo2e: 20, scenarioPotentialAvoidedKgCo2e: 10,
-  demoPointsAwarded: 100, demoPointsBalance: 100, assumptionsVersion: 'demo-v1' as const,
+  demoPointsAwarded: 100, demoPointsBalance: 100, rewardStatus: 'awarded' as const, assumptionsVersion: 'demo-v2' as const,
 }
 let balance = 0
 let redeemed = false
@@ -110,6 +110,22 @@ describe('EcoScan user journeys', () => {
     expect(screen.getByRole('alert').textContent).toContain('JPEG, PNG, or WebP')
     expect((screen.getByRole('button', { name: 'Scan photo' }) as HTMLButtonElement).disabled).toBe(true)
     expect(api.upload).not.toHaveBeenCalled()
+  })
+  it('does not silently turn an unrecognized image into a T-shirt', async () => {
+    vi.mocked(api.upload).mockResolvedValue({
+      kind: 'ready',
+      analysis: { analysisId: id, recognitionMode: 'vision', needsReview: true, suggestions: [] },
+    })
+    const user = userEvent.setup()
+    render(<App />)
+    await uploadPhoto(user)
+    expect(await screen.findByText(/No supported clothing was identified/)).toBeTruthy()
+    await user.click(screen.getByRole('button', { name: 'Add an item' }))
+    expect((screen.getByLabelText('Category for item 1') as HTMLSelectElement).value).toBe('')
+    await user.click(screen.getByLabelText('Yes, it would replace a planned purchase'))
+    expect((screen.getByRole('button', { name: 'Confirm and see estimate' }) as HTMLButtonElement).disabled).toBe(true)
+    await user.selectOptions(screen.getByLabelText('Category for item 1'), 'jeans')
+    expect((screen.getByRole('button', { name: 'Confirm and see estimate' }) as HTMLButtonElement).disabled).toBe(false)
   })
   it('shows a zero-points estimate when no planned purchase is replaced', async () => {
     vi.mocked(api.confirm).mockResolvedValue({ ...result, scenarioPotentialAvoidedKgCo2e: 0, demoPointsAwarded: 0, demoPointsBalance: 0 })

@@ -32,7 +32,7 @@ Browser <- JSON  <- Result
 2. The route resolves the browser session and calls ScanService.confirm.
 3. ScanService checks the input and builds a fingerprint representing the category totals and choice.
 4. The store checks that this session owns the analysis and that it is still valid. An equivalent completed request returns its saved result immediately.
-5. For a new confirmation, the supplied calculation calls the domain function. With replacement selected, the demo rules return 5 kg estimated production, 2.5 kg potential avoided production, and 25 points.
+5. For a new confirmation, the store supplies the original recognition evidence to the domain function. If the live-AI T-shirt suggestion is unchanged, replacement is selected, and the image hash has not claimed a reward, the demo rules return a 5 kg category benchmark, a 2.5 kg hypothetical avoided amount, and 25 points. Otherwise the estimate remains available but points are zero.
 6. The store validates and saves the result and adds points as one atomic operation. PostgreSQL mode commits these changes together in a transaction. Repeating the request cannot add another 25 points.
 7. The route sends the result as JSON.
 

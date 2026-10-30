@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import { performance } from 'node:perf_hooks'
 import { analysisResponseSchema, type AnalysisJobStatus, type AnalysisResponse } from '../../../shared/src/index.js'
 import type { EcoScanStore } from './ports.js'
@@ -61,7 +61,11 @@ export class AnalysisService {
     const result = analysisResponseSchema.parse({
       analysisId: randomUUID(), recognitionMode: this.recognizer.mode, suggestions, needsReview: true,
     })
-    await this.store.addAnalysis(sessionId, result.analysisId, result.suggestions)
+    await this.store.addAnalysis(sessionId, result.analysisId, {
+      suggestions: result.suggestions,
+      recognitionMode: result.recognitionMode,
+      imageHash: createHash('sha256').update(image).digest('hex'),
+    })
     return result
   }
 }

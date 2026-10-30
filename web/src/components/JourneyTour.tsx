@@ -6,7 +6,7 @@ const steps = [
   { number: '01', label: 'Snap', title: 'Start with what you already own.', description: 'Upload a clear photo or use your camera. A single garment or a whole outfit is a good place to start.', object: 0, overlay: 'scan' },
   { number: '02', label: 'Check', title: 'A little check makes a difference.', description: 'Recognition suggests the clothing. You can correct the categories and quantities before calculating your estimate.', object: 2, overlay: 'review' },
   { number: '03', label: 'See', title: 'See the story behind the clothes.', description: 'Explore estimated production impact and a reuse comparison. Illustrative catalogue values, not measurements from a photo.', object: 0, overlay: 'estimate' },
-  { number: '04', label: 'Earn', title: 'Give another wear a little reward.', description: 'If reuse replaces a planned new purchase, the demo scenario awards points. Explore example offers; no real vouchers are issued.', object: 4, overlay: 'reward' },
+  { number: '04', label: 'Earn', title: 'Give another wear a little reward.', description: 'An unchanged live-AI result can earn demo points when reuse replaces a planned purchase. Explore example offers; no real vouchers are issued.', object: 4, overlay: 'reward' },
 ]
 
 export function JourneyTour() {
