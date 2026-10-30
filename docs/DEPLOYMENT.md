@@ -1,6 +1,6 @@
 # Backend deployment and operations
 
-This Compose setup runs the EcoScan **backend demo** as four containers: PostgreSQL, a one-time migration, the HTTP API, and a recognition worker. The browser UI is not part of this Compose deployment. For a full-stack Render Blueprint, use [RENDER.md](RENDER.md) and the root `render.yaml`. Points and offers remain illustrative; do not attach real monetary value to them without verified eligibility and abuse controls.
+This Compose setup runs the EcoScan **backend demo** as four containers: PostgreSQL, a one-time migration, the HTTP API, and a recognition worker. The browser UI is not part of this Compose deployment. For the full-stack Vercel and Neon deployment, use [VERCEL.md](VERCEL.md). Points and offers remain illustrative; do not attach real monetary value to them without verified eligibility and abuse controls.
 
 ## Before starting
 

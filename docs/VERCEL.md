@@ -1,6 +1,6 @@
 # Deploy EcoScan on Vercel and Neon
 
-Vercel serves the Vite site and runs one Express function in `api/index.ts`. The function imports the existing application from `backend/src/` and uses Neon PostgreSQL for accounts, sessions, estimates, and rewards. Photo recognition completes within the upload request on this hosting option, so no continuous worker is required. The separate Docker/Render deployment continues to use its queued worker.
+Vercel serves the Vite site and runs one Express function in `api/index.ts`. The function imports the existing application from `backend/src/` and uses Neon PostgreSQL for accounts, sessions, estimates, and rewards. Photo recognition completes within the upload request on this hosting option, so no continuous worker is required. The separate Docker Compose deployment continues to use its queued worker.
 
 ## Prepare Neon
 

@@ -119,18 +119,9 @@ For example, one T-shirt gives a **5 kg CO₂e production estimate**, a **2.5 kg
 
 The API is a modular application rather than a collection of microservices. PostgreSQL stores accounts, revocable JWT login sessions, balances, redemptions, the latest confirmed estimate, and recognition jobs. Confirmation and redemption use transactions to protect points from retries and concurrent requests. Workers use leases and shared limits. Photos are temporarily kept in PostgreSQL until processing or expiry; this keeps the initial deployment simple but increases database size and backup exposure. See [architecture](docs/ARCHITECTURE.md) and [backend reliability](docs/BACKEND_RELIABILITY.md).
 
-## Deploy on Render
+## Deploy on Vercel and Neon
 
-The root [Blueprint](render.yaml) creates a **web service, background worker, and persistent PostgreSQL** in Singapore. They use paid plans; review [Render pricing](https://render.com/pricing) before creating them. The web service builds React and serves it through Express on the same HTTPS origin as `/api`. The web and worker run idempotent migrations before starting.
-
-1. Connect this GitHub repository to Render and choose **New → Blueprint**.
-2. Select the `main` branch and `render.yaml`. Review the three resources and their costs.
-3. Enter `OPENAI_API_KEY` in Render's secret prompt. Render generates the other secrets and wires the database. Do not put secret values in the YAML.
-4. Apply the Blueprint. Once both services are running, open the web service's `onrender.com` URL, check `/api/ready`, and complete a scan through Results and Rewards.
-
-The Blueprint uses live OpenAI recognition, which needs a valid key and API billing. To create an explicitly mock-only preview, set `VISION_PROVIDER=mock` on **both** Render services and redeploy. No live deployment URL is claimed until a deployment is verified. Read [Render deployment details](docs/RENDER.md) for checks and operational limits. [Compose deployment](docs/DEPLOYMENT.md) is a separate backend-only, self-hosted option.
-
-**Vercel and Neon option:** [Deploy the full demo](docs/VERCEL.md) using `vercel.json`, the `api/index.ts` function, and Neon PostgreSQL. On this hosting option, photo recognition runs within the upload request rather than a continuous worker. Apply migrations through Neon's direct connection; configure the Vercel function with its pooled connection.
+[Deploy the full demo](docs/VERCEL.md) using `vercel.json`, the `api/index.ts` function, and Neon PostgreSQL. Photo recognition runs within the upload request rather than a continuous worker. Apply migrations through Neon's direct connection; configure the Vercel function with its pooled connection. A separate [Compose deployment](docs/DEPLOYMENT.md) runs the backend and worker on a self-hosted machine.
 
 ## Improvements beyond the prototype
 
@@ -140,4 +131,4 @@ The Blueprint uses live OpenAI recognition, which needs a valid key and API bill
 
 ## Further reading
 
-[Frontend UX](web/README.md) · [API contract and architecture](docs/ARCHITECTURE.md) · [Service layer](docs/SERVICE_LAYER.md) · [Reliability](docs/BACKEND_RELIABILITY.md) · [OpenAI setup](docs/OPENAI_SETUP.md) · [Render deployment](docs/RENDER.md)
+[Frontend UX](web/README.md) · [API contract and architecture](docs/ARCHITECTURE.md) · [Service layer](docs/SERVICE_LAYER.md) · [Reliability](docs/BACKEND_RELIABILITY.md) · [OpenAI setup](docs/OPENAI_SETUP.md) · [Vercel deployment](docs/VERCEL.md)
