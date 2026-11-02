@@ -1,5 +1,6 @@
 import { analysisJobStatusSchema, analysisResponseSchema, confirmScanResponseSchema, latestScanResponseSchema,
-  offersResponseSchema, redeemOfferResponseSchema, type ConfirmScanRequest } from 'shared'
+  materialRecognitionResponseSchema, voucherActionResponseSchema, offersResponseSchema, redeemOfferResponseSchema, activityEvidenceSnapshotSchema, activityRequestResponseSchema, type QualifyingActivity, type ConfirmScanRequest } from 'shared'
+import { recoveryKeyResponseSchema,recoveredReceiptSchema } from 'shared'
 
 export class ApiError extends Error {
   status: number
@@ -29,24 +30,12 @@ function ensureSession() {
   return session
 }
 export const api = {
-  async me(): Promise<{ user: { id: string; email: string } | null }> {
-    return (await request('/auth/me')).body
-  },
-  async signup(email: string, password: string): Promise<{ user: { id: string; email: string } }> {
+  async createRecoveryKey(offerId: string) { await ensureSession(); return recoveryKeyResponseSchema.parse((await request('/offers/'+encodeURIComponent(offerId)+'/recovery-key',{method:'POST'})).body) },
+  async recoverReceipt(recoveryKey: string) { return recoveredReceiptSchema.parse((await request('/offers/recover',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({recoveryKey})})).body) },
+  async activityEvidence() { await ensureSession(); return activityEvidenceSnapshotSchema.parse((await request('/activity-evidence')).body) },
+  async requestActivityEvidence(partnerId: string, activity: QualifyingActivity) {
     await ensureSession()
-    const result = (await request('/auth/signup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) })).body
-    session = undefined
-    return result
-  },
-  async login(email: string, password: string): Promise<{ user: { id: string; email: string } }> {
-    const result = (await request('/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) })).body
-    session = undefined
-    return result
-  },
-  async logout(): Promise<void> {
-    const response = await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' })
-    if (!response.ok) throw new ApiError('Could not log out. Please try again.', response.status)
-    session = undefined
+    return activityRequestResponseSchema.parse((await request('/activity-evidence/requests', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ partnerId, activity }) })).body)
   },
   async upload(file: File) {
     await ensureSession()
@@ -63,6 +52,11 @@ export const api = {
     await ensureSession()
     return analysisJobStatusSchema.parse((await request('/analyses/' + encodeURIComponent(id), { signal })).body)
   },
+  async recognizeMaterialLabel(file: File) {
+    await ensureSession()
+    const form = new FormData(); form.append('image', file)
+    return materialRecognitionResponseSchema.parse((await request('/materials/recognize-label', { method: 'POST', body: form })).body)
+  },
   async confirm(input: ConfirmScanRequest) {
     await ensureSession()
     return confirmScanResponseSchema.parse((await request('/scans/confirm', {
@@ -74,6 +68,14 @@ export const api = {
     return latestScanResponseSchema.parse((await request('/scans/latest')).body)
   },
   async offers() { await ensureSession(); return offersResponseSchema.parse((await request('/offers')).body) },
+  async useDemo(id: string) {
+    await ensureSession()
+    return voucherActionResponseSchema.parse((await request('/offers/' + encodeURIComponent(id) + '/demo-use', { method: 'POST' })).body)
+  },
+  async refund(id: string) {
+    await ensureSession()
+    return voucherActionResponseSchema.parse((await request('/offers/' + encodeURIComponent(id) + '/refund', { method: 'POST' })).body)
+  },
   async redeem(id: string) {
     await ensureSession()
     return redeemOfferResponseSchema.parse((await request('/offers/' + encodeURIComponent(id) + '/redeem', { method: 'POST' })).body)

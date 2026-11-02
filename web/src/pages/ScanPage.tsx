@@ -4,9 +4,12 @@ import { clothingCategorySchema, type ClothingCategory } from 'shared'
 import type { ScanFlow } from '../hooks/useScan'
 import { CameraCapture } from '../components/CameraCapture'
 import { labels } from '../lib/labels'
+import { MaterialProfileEditor } from '../components/MaterialProfileEditor'
 
 export function ScanPage({ scan }: { scan: ScanFlow }) {
   const navigate = useNavigate()
+  const [readingItems, setReadingItems] = useState<Record<string, boolean>>({})
+  const readingLabel = scan.items.some(item => readingItems[item.key])
   const [camera, setCamera] = useState(false)
   const [preview, setPreview] = useState('')
   // Object URLs are browser resources: create and revoke them with the selected file.
@@ -23,7 +26,7 @@ export function ScanPage({ scan }: { scan: ScanFlow }) {
   const working = ['uploading', 'queued', 'processing'].includes(scan.phase)
   const locked = scan.phase === 'confirming' || !!scan.confirmation
   const totalItems = scan.items.reduce((sum, item) => sum + (Number.isFinite(item.quantity) ? item.quantity : 0), 0)
-  const valid = scan.items.length > 0
+  const valid = !readingLabel && scan.items.length > 0
     && scan.items.every((item) => item.category !== '' && Number.isInteger(item.quantity) && item.quantity >= 1 && item.quantity <= 10)
     && totalItems <= 10
     && scan.replaces !== null
@@ -39,7 +42,7 @@ export function ScanPage({ scan }: { scan: ScanFlow }) {
       <label className="file-label" htmlFor="clothing-photo">Choose an image</label>
       <input id="clothing-photo" type="file" accept="image/jpeg,image/png,image/webp" aria-describedby="photo-help"
         onChange={(event) => scan.selectFile(event.target.files?.[0] ?? null)} />
-      <p id="photo-help" className="muted">JPEG, PNG, or WebP · up to 5 MB</p>
+      <p id="photo-help" className="muted">JPEG, PNG, or WebP · up to 4 MB</p>
       <p>Or <button className="text-button" onClick={() => setCamera(true)}>use your camera</button>.</p>
       {camera && <CameraCapture onCapture={(file) => { scan.selectFile(file); setCamera(false) }} onClose={() => setCamera(false)} />}
       {scan.file && preview && <div className="photo-preview"><img src={preview} alt="Clothing photo selected for scanning" /><p>{scan.file.name}</p></div>}
@@ -61,16 +64,18 @@ export function ScanPage({ scan }: { scan: ScanFlow }) {
         {scan.confirmation && scan.phase !== 'confirming' && <p className="note">The previous confirmation may have completed. Your items are held unchanged so you can safely retry the same confirmation.</p>}
         {preview && <img className="review-photo" src={preview} alt="Your uploaded clothing for reference" />}
         {!scan.items.length && <p>No supported clothing was identified. Try another photo, or add a category manually for an estimate only.</p>}
-        <p className="note"><strong>Reward check:</strong> points are available only when the confirmed list exactly matches the AI suggestions and this image has not earned points in this session or account. Manual or corrected items still receive an illustrative estimate, but no points.</p>
+        <p className="note"><strong>Reward check:</strong> points are available only when the confirmed list exactly matches the AI suggestions and this image or a visually similar image has not already earned points. Manual or corrected items still receive an illustrative estimate, but no points.</p>
         <fieldset disabled={locked}><legend className="sr-only">Clothing items</legend>
-          {scan.items.map((item, index) => <div className="item-row" key={item.key}>
+          {scan.items.map((item, index) => <div className="item-card" key={item.key}><div className="item-row">
             <label>Item {index + 1}<select aria-label={'Category for item ' + (index + 1)} value={item.category} onChange={(event) => scan.setItems((items) => items.map((row) => row.key === item.key ? { ...row, category: event.target.value as ClothingCategory } : row))}>
               <option value="" disabled>Select a category…</option>
               {clothingCategorySchema.options.map((category) => <option key={category} value={category}>{labels[category]}</option>)}
             </select></label>
             <label>Quantity<input type="number" min="1" max="10" required aria-label={'Quantity for item ' + (index + 1)} value={item.quantity || ''} onChange={(event) => scan.setItems((items) => items.map((row) => row.key === item.key ? { ...row, quantity: Number(event.target.value) } : row))} /></label>
             <button type="button" className="secondary" aria-label={'Remove item ' + (index + 1)} onClick={() => scan.setItems((items) => items.filter((row) => row.key !== item.key))}>Remove</button>
-          </div>)}
+          </div><MaterialProfileEditor draftKey={item.key} onReadingChange={reading => setReadingItems(items => ({ ...items, [item.key]: reading }))} category={item.category} itemNumber={index + 1} profile={item.materialProfile} disabled={locked}
+            onConfirm={(materialProfile) => scan.setItems((items) => items.map((row) => row.key === item.key ? { ...row, materialProfile } : row))}
+            onInvalidate={() => scan.setItems((items) => items.map((row) => row.key === item.key ? { ...row, materialProfile: undefined } : row))} /></div>)}
           <button type="button" className="secondary" disabled={scan.items.length >= 10 || totalItems >= 10} onClick={() => scan.setItems((items) => [...items, { key: crypto.randomUUID(), category: '', quantity: 1 }])}>Add an item</button>
           {totalItems > 10 && <p className="error" role="alert">A scan can contain at most 10 items.</p>}
         </fieldset>
@@ -80,7 +85,7 @@ export function ScanPage({ scan }: { scan: ScanFlow }) {
         <p>This choice creates an example comparison. It does not verify real emissions savings.</p>
         <label className="radio"><input type="radio" name="replacement" checked={scan.replaces === true} onChange={() => scan.setReplaces(true)} required /> Yes, it would replace a planned purchase</label>
         <label className="radio"><input type="radio" name="replacement" checked={scan.replaces === false} onChange={() => scan.setReplaces(false)} required /> No, or I’m not sure</label>
-        <p className="muted">Both choices show an estimate. “Yes” can earn points only for an unchanged AI-recognized list; each image can earn once per session or account.</p>
+        <p className="muted">Both choices show an estimate. “Yes” can earn points only for an unchanged AI-recognized list; similar images cannot earn again for 90 days, with a daily cap of 250 points per browser session (UTC).</p>
       </fieldset>
       <div className="actions"><button type="submit" disabled={!valid || scan.phase === 'confirming'}>{scan.phase === 'confirming' ? 'Calculating…' : scan.confirmation ? 'Retry confirmation' : 'Confirm and see estimate'}</button><button type="button" className="secondary" disabled={scan.phase === 'confirming'} onClick={() => scan.reset()}>Use another photo</button></div>
     </form>}

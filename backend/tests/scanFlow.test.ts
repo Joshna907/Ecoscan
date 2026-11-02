@@ -3,7 +3,7 @@ import request from 'supertest'
 import { createTestApp as createApp, verifiedRecognizer } from './helpers'
 
 const PNG_1X1 = Buffer.from(
-  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/lXcAAAAASUVORK5CYII=',
+  'iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAE0lEQVQImWP4z8DwnwGM/zMwAAAf7gP9qS/A4gAAAABJRU5ErkJggg==',
   'base64',
 )
 
@@ -37,7 +37,7 @@ describe('reviewed scan and demo offers', () => {
       demoPointsAwarded: 100,
       demoPointsBalance: 100,
       rewardStatus: 'awarded',
-      assumptionsVersion: 'demo-v2',
+      assumptionsVersion: 'materials-v2',
     })
     expect((await agent.get('/api/scans/latest').expect(200)).body.result).toEqual(scan.body)
 
@@ -48,8 +48,7 @@ describe('reviewed scan and demo offers', () => {
     const redemption = await agent.post('/api/offers/swap-pass/redeem').expect(200)
     expect(redemption.body).toMatchObject({ offerId: 'swap-pass', demoPointsBalance: 40 })
     expect(redemption.body.receipt.reference).toMatch(/^DEMO-[0-9A-F]{16}$/)
-    expect(await agent.post('/api/offers/swap-pass/redeem').then((res) => res.body.error.code))
-      .toBe('ALREADY_REDEEMED')
+    expect((await agent.post('/api/offers/swap-pass/redeem').expect(200)).body.receipt).toEqual(redemption.body.receipt)
     expect(await agent.post('/api/offers/secondhand-voucher/redeem').then((res) => res.body.error.code))
       .toBe('INSUFFICIENT_POINTS')
 

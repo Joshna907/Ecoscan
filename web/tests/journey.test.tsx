@@ -6,7 +6,7 @@ import { api, ApiError } from '../src/lib/api'
 import { downloadDemoReceipt } from '../src/lib/demoReceipt'
 
 vi.mock('../src/lib/api', () => ({
-  api: { offers: vi.fn(), upload: vi.fn(), status: vi.fn(), confirm: vi.fn(), latestScan: vi.fn(), redeem: vi.fn(), me: vi.fn(), signup: vi.fn(), login: vi.fn(), logout: vi.fn() },
+  api: { offers: vi.fn(), upload: vi.fn(), status: vi.fn(), confirm: vi.fn(), latestScan: vi.fn(), redeem: vi.fn(), refund: vi.fn(), useDemo: vi.fn(), activityEvidence: vi.fn(), requestActivityEvidence: vi.fn() },
   ApiError: class extends Error { status: number; constructor(message: string, status: number) { super(message); this.status = status } },
   messageOf: (error: Error) => error.message,
 }))
@@ -14,8 +14,8 @@ vi.mock('../src/lib/demoReceipt', () => ({ downloadDemoReceipt: vi.fn() }))
 const id = 'a1b2c3d4-1234-4123-8123-123456789abc'
 const analysis = { analysisId: id, recognitionMode: 'mock' as const, needsReview: true as const, suggestions: [{ id: 'item-1', category: 'tshirt' as const }] }
 const result = {
-  items: [{ category: 'jeans' as const, quantity: 2, estimatedProductionKgCo2e: 20 }],
-  totalEstimatedProductionKgCo2e: 20, scenarioPotentialAvoidedKgCo2e: 10,
+  items: [{ category: 'jeans' as const, quantity: 2, estimatedProductionKgCo2e: 20, estimatedProductionRangeKgCo2e: { low: 12, central: 20, high: 32 } }],
+  totalEstimatedProductionRangeKgCo2e: { low: 12, central: 20, high: 32 }, scenarioPotentialAvoidedRangeKgCo2e: { low: 6, central: 10, high: 16 }, materialProfiledQuantity: 0, totalQuantity: 2, factorDatasetVersion: 'ecoscan-material-factors-v2' as const, lifecycleBoundary: { categoryBenchmark: 'illustrative whole-garment production benchmark' as const, materialStage: 'fibre production, cradle-to-gate' as const }, totalEstimatedProductionKgCo2e: 20, scenarioPotentialAvoidedKgCo2e: 10,
   demoPointsAwarded: 100, demoPointsBalance: 100, rewardStatus: 'awarded' as const, assumptionsVersion: 'demo-v2' as const,
 }
 let balance = 0
@@ -23,8 +23,8 @@ let redeemed = false
 const receipt = { reference: 'DEMO-TEST1234567890', redeemedAt: '2026-10-29T10:00:00.000Z' }
 beforeEach(() => {
   vi.resetAllMocks()
-  vi.mocked(api.me).mockResolvedValue({ user: null })
   vi.mocked(api.latestScan).mockResolvedValue({ result: null })
+  vi.mocked(api.activityEvidence).mockResolvedValue({ enabled: false, verifiedActivityCredits: 0, receipts: [], partners: [] })
   sessionStorage.clear()
   window.location.hash = '#/scan'
   balance = 0; redeemed = false
@@ -41,23 +41,12 @@ async function uploadPhoto(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByRole('button', { name: 'Scan photo' }))
 }
 describe('EcoScan user journeys', () => {
-  it('creates an account and logs out from the account page', async () => {
-    const user = userEvent.setup()
-    vi.mocked(api.signup).mockResolvedValue({ user: { id: 'account-1', email: 'joshna@example.com' } })
-    vi.mocked(api.logout).mockResolvedValue()
-    window.location.hash = '#/account'
-    render(<App />)
-    await user.type(screen.getByLabelText('Email address'), 'joshna@example.com')
-    await user.type(screen.getByLabelText('Password'), 'long-password-123')
-    await user.click(screen.getByRole('button', { name: 'Create account' }))
-    expect(api.signup).toHaveBeenCalledWith('joshna@example.com', 'long-password-123')
-    await screen.findByRole('heading', { name: 'Your demo rewards' })
-    await user.click(screen.getByRole('link', { name: 'Account' }))
-    await screen.findByText('joshna@example.com')
-    await user.click(screen.getByRole('button', { name: 'Log out' }))
-    expect(api.logout).toHaveBeenCalledTimes(1)
-    await user.click(screen.getByRole('link', { name: 'Sign up / Log in' }))
-    await screen.findByRole('heading', { name: 'Keep your progress close.' })
+  it('labels supported fibre contributions as incomplete and names missing elastane mass',async()=>{
+    vi.mocked(api.latestScan).mockResolvedValue({result:{...result,assumptionsVersion:'materials-v2',materialProfiledQuantity:2,materialStageKgCo2e:{low:0.89,central:1.78,high:2.67},items:[{...result.items[0],materialProfile:{source:'manual',userConfirmed:true,weightGrams:200,composition:[{material:'cotton',percentage:98},{material:'elastane',percentage:2}]},materialStageKgCo2e:{low:0.89,central:1.78,high:2.67},effectiveWeightGrams:{low:200,central:200,high:200,source:'measured'},materialCoverageGrams:196,materialCoverage:{status:'partial',supportedMassGrams:196,uncoveredMassGrams:4,unallocatedMassGrams:0,missingFactors:[{material:'elastane',weightGrams:4}]}}]}})
+    window.location.hash='#/results';render(<App/>)
+    await screen.findByRole('heading',{name:'Known fibre contribution — incomplete'})
+    expect(screen.getByText(/elastane\/spandex, 4 g per item/)).toBeTruthy()
+    expect(screen.getByText(/high value is not an upper bound/)).toBeTruthy()
   })
   it('keeps the full guide on home with only Results and Rewards in navigation', () => {
     window.location.hash = '#/'
@@ -81,7 +70,7 @@ describe('EcoScan user journeys', () => {
     await user.click(screen.getByRole('button', { name: 'Confirm and see estimate' }))
     await screen.findByRole('heading', { name: 'Your clothing estimate' })
     expect(api.confirm).toHaveBeenCalledWith({ analysisId: id, items: [{ category: 'jeans', quantity: 2 }], replacesPlannedNewPurchase: true })
-    expect(screen.getAllByText('20 kg CO₂e').length).toBe(2)
+    expect(screen.getAllByText('12–32 kg CO₂e (central 20)').length).toBe(2)
     await user.click(within(screen.getByRole('navigation')).getByRole('link', { name: 'Rewards' }))
     await screen.findByText('100 demo points')
     await waitFor(() => expect((screen.getByRole('button', { name: 'Redeem demo offer' }) as HTMLButtonElement).disabled).toBe(false))
@@ -100,7 +89,7 @@ describe('EcoScan user journeys', () => {
     window.location.hash = '#/results'
     render(<App />)
     await screen.findByRole('heading', { name: 'Your clothing estimate' })
-    expect(screen.getAllByText('20 kg CO₂e').length).toBe(2)
+    expect(screen.getAllByText('12–32 kg CO₂e (central 20)').length).toBe(2)
     expect(api.latestScan).toHaveBeenCalledTimes(1)
   })
   it('rejects unsupported files before calling the backend', async () => {
@@ -201,4 +190,35 @@ describe('EcoScan user journeys', () => {
     await user.click(screen.getByRole('button', { name: 'Close camera' }))
     expect(screen.getByLabelText('Choose an image')).toBeTruthy()
   })
+  it('has no login links and opens the privacy disclosure from a deep link', async () => {
+    window.location.hash = '#/#privacy'
+    render(<App />)
+    expect(screen.queryByRole('link', { name: /sign up|log in|account/i })).toBeNull()
+    const heading = await screen.findByRole('heading', { name: 'Your photo and session' })
+    expect(heading.closest('details')?.open).toBe(true)
+  })
+  it('explains an older saved result instead of presenting an empty history', async () => {
+    vi.mocked(api.latestScan).mockResolvedValue({ result: null, legacyResult: true })
+    window.location.hash = '#/results'
+    render(<App />)
+    await screen.findByRole('heading', { name: 'Your earlier estimate uses an older methodology' })
+  })
+
+  it('simulates demo fulfilment only after confirmation and removes refund access', async () => {
+    const user = userEvent.setup()
+    let used = false
+    vi.mocked(api.offers).mockImplementation(async () => ({
+      demoPointsBalance: 0,
+      offers: [{ id: 'repair-kit', title: 'Clothing repair kit', description: 'Demo only', pointsCost: 25, canRedeem: false, redeemed: true, receipt: { ...receipt, status: used ? 'used' : 'issued' } }],
+    }))
+    vi.mocked(api.useDemo).mockImplementation(async () => { used = true; return { demoPointsBalance: 0, receipt: { ...receipt, status: 'used' as const } } })
+    window.location.hash = '#/rewards'
+    render(<App />)
+    await user.click(await screen.findByRole('button', { name: 'Simulate demo fulfilment' }))
+    expect(api.useDemo).not.toHaveBeenCalled()
+    await user.click(screen.getByRole('button', { name: 'Confirm demo fulfilment' }))
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Refund unused demo voucher' })).toBeNull())
+    expect(api.useDemo).toHaveBeenCalledWith('repair-kit')
+  })
+
 })

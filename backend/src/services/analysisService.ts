@@ -1,4 +1,5 @@
-import { createHash, randomUUID } from 'node:crypto'
+import { rewardImageFingerprint } from './rewardImage.js'
+import { randomUUID } from 'node:crypto'
 import { performance } from 'node:perf_hooks'
 import { analysisResponseSchema, type AnalysisJobStatus, type AnalysisResponse } from '../../../shared/src/index.js'
 import type { EcoScanStore } from './ports.js'
@@ -45,6 +46,7 @@ export class AnalysisService {
 
   async analyse(sessionId: string, image: Buffer, mimeType: string, context: AnalysisContext = {}): Promise<AnalysisResponse | undefined> {
     if (context.isCancelled?.()) return
+    const imageHash = await rewardImageFingerprint(image)
     const started = performance.now()
     let outcome: 'success' | 'failure' = 'failure'
     let suggestions
@@ -64,7 +66,7 @@ export class AnalysisService {
     await this.store.addAnalysis(sessionId, result.analysisId, {
       suggestions: result.suggestions,
       recognitionMode: result.recognitionMode,
-      imageHash: createHash('sha256').update(image).digest('hex'),
+      imageHash,
     })
     return result
   }

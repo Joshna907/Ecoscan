@@ -9,6 +9,7 @@ dist/
 *.log
 .cookies
 .postgres-test/
+/audit-artifacts/
 web/media-source/footer-original.mp4
 .playwright-cli/
 web/media-source/checks/

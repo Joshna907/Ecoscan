@@ -28,10 +28,10 @@ flowchart LR
 
 This is one deployable backend (a modular monolith), not microservices. `web/` handles interaction, `backend/` owns rules and state, `api/index.ts` adapts it to a Vercel Function, and `shared/` holds request/response schemas used by both. The recognition adapter returns item *suggestions only*. It never decides carbon or points.
 
-The API creates an opaque, HTTP-only, same-site anonymous session cookie. In PostgreSQL mode, a user can sign up and attach that session to an account; later logins use a separate revocable HTTP-only cookie to resolve the same account-owned balance. Anonymous sessions expire after inactivity, while account-owned balances persist. The browser does not choose or edit its point balance. The React UI uses a Vite `/api` proxy to Express in development. Its pages are described in `web/README.md`. `GET /api/health` is a process liveness check; `GET /api/ready` checks the PostgreSQL connection when one is configured.
+Anonymous browser sessions own balances, receipts and latest results. There are no accounts, passwords or cross-device recovery. See [anonymous reward lifecycle](ANONYMOUS_REWARDS.md).
 
 ```text
-web/src/pages/               home, scan, results, rewards, and account pages
+web/src/pages/               home, scan, results and rewards pages
 web/src/hooks/               scan workflow and rewards state
 web/src/components/          camera, navigation, and home sections
 web/src/lib/api.ts           backend client
@@ -47,7 +47,7 @@ shared/src/                 request and response schemas
 
 Routes handle HTTP and delegate workflows to `AnalysisService`, `ScanService`, and `OfferService`. Services call domain rules, the recognition adapter, and the `EcoScanStore` contract. The chosen store owns atomic state changes; routes cannot mutate balances directly. Cookie handling lives in HTTP middleware, and `app.ts` connects the components and maps application errors to HTTP responses. See [SERVICE_LAYER.md](SERVICE_LAYER.md) for a simple walkthrough and file map.
 
-These are internal code boundaries within one backend codebase. The storage contract is asynchronous. PostgreSQL mode uses transactions and row locks for rewards and confirmation retries. The long-running deployment queues recognition and a worker completes it. The Vercel/Neon deployment recognizes within the upload request because it has no continuous worker; it keeps PostgreSQL for accounts, sessions, results, limits, and rewards. PostgreSQL also coordinates upload rate and concurrency limits across copies.
+These are internal code boundaries within one backend codebase. The storage contract is asynchronous. PostgreSQL mode uses transactions and row locks for rewards and confirmation retries. The long-running deployment queues recognition and a worker completes it. The Vercel/Neon deployment recognizes within the upload request because it has no continuous worker; it keeps PostgreSQL for anonymous sessions, results, limits, and rewards. PostgreSQL also coordinates upload rate and concurrency limits across copies.
 
 ## API contract
 
@@ -55,7 +55,7 @@ All responses use JSON except the image upload request. Errors use `{ "error": {
 
 ### `POST /api/analyses`
 
-Multipart field: `image`. Accept JPEG, PNG, or WebP up to 5 MB. Check the file content as well as the reported MIME type. Return `400` for a missing file, `415` for unsupported content, and `413` for an oversized file. The Docker deployment with PostgreSQL queues recognition and returns `202` with an analysis ID; `GET /api/analyses/:analysisId` reports `queued`, `processing`, `ready`, `failed`, or `confirmed`. The worker deletes the private image bytes after success or final failure. The Vercel deployment uses PostgreSQL but processes recognition within the request and returns suggestions directly with `200`, as does the in-memory demo.
+Multipart field: `image`. Accept JPEG, PNG, or WebP up to 4 MiB. Check the file content as well as the reported MIME type. Return `400` for a missing file, `415` for unsupported content, and `413` for an oversized file. The Docker deployment with PostgreSQL queues recognition and returns `202` with an analysis ID; `GET /api/analyses/:analysisId` reports `queued`, `processing`, `ready`, `failed`, or `confirmed`. The worker deletes the private image bytes after success or final failure. The Vercel deployment uses PostgreSQL but processes recognition within the request and returns suggestions directly with `200`, as does the in-memory demo.
 
 ```json
 {
@@ -70,7 +70,7 @@ Multipart field: `image`. Accept JPEG, PNG, or WebP up to 5 MB. Check the file c
 
 ### `POST /api/scans/confirm`
 
-The user submits reviewed item categories and the comparison choice. The API validates at most ten total items and always computes the category estimate. Points are awarded only when a live vision result has a stored image hash, the confirmed category totals exactly match the suggestions, the user selected the planned-purchase comparison, and that hash has not already earned points in the session or account. Manual, corrected, mock, duplicate, and non-replacement scans save an estimate with zero points. The latest estimate is saved on the session so Results survives refresh. A repeated equivalent confirmation returns its original response. A changed confirmation returns `409 CONFIRMATION_CONFLICT`.
+The user submits reviewed item categories and the comparison choice. The API validates at most ten total items and always computes the category estimate. Points are awarded only when a live vision result has a stored image hash, the confirmed category totals exactly match the suggestions, the user selected the planned-purchase comparison, and neither that normalized image nor a visually similar one has earned points across sessions in the last 90 days, and the award fits the 250-point daily session/account allowance (UTC). Manual, corrected, mock, duplicate, and non-replacement scans save an estimate with zero points. The latest estimate is saved on the session so Results survives refresh. A repeated equivalent confirmation returns its original response. A changed confirmation returns `409 CONFIRMATION_CONFLICT`.
 
 ```json
 {
@@ -94,7 +94,7 @@ The user submits reviewed item categories and the comparison choice. The API val
 
 ### `GET /api/scans/latest`
 
-Returns `{ "result": null }` before the first confirmation, or the latest confirmed estimate for the current anonymous session or signed-in account. The snapshot contains no photo. The short-lived analysis record is still used for safe confirmation retries; the latest snapshot remains until the anonymous session expires or the account is deleted.
+Returns `{ "result": null }` before the first confirmation, or the latest confirmed estimate for the current anonymous browser session. The snapshot contains no photo. The short-lived analysis record is still used for safe confirmation retries; the latest snapshot remains until the anonymous session expires .
 
 ### `GET /api/offers`
 

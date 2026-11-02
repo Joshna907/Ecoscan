@@ -1,0 +1,18 @@
+name: Prepare production database
+on: workflow_dispatch
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_DIRECT_URL }}
+      RATE_LIMIT_HASH_KEY: ${{ secrets.RATE_LIMIT_HASH_KEY }}
+      VISION_PROVIDER: mock
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run release:prepare -w api

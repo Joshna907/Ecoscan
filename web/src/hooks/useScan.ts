@@ -1,22 +1,37 @@
 import { useEffect, useRef, useState } from 'react'
-import type { AnalysisResponse, ClothingCategory, ConfirmScanRequest, ConfirmScanResponse } from 'shared'
+import { analysisResponseSchema, confirmedItemSchema, type AnalysisResponse, type ClothingCategory, type ConfirmScanRequest, type ConfirmScanResponse, type MaterialProfile } from 'shared'
 import { api, ApiError, messageOf } from '../lib/api'
 
+const draftKey = 'ecoscan.review.v1'
+function reviewDraft() {
+  try {
+    const value = JSON.parse(sessionStorage.getItem(draftKey) ?? 'null')
+    if (!value || !Number.isFinite(value.expiresAt) || value.expiresAt <= Date.now() || ![true, false, null].includes(value.replaces)) return null
+    const analysis = analysisResponseSchema.parse(value.analysis)
+    const items = value.items.map((item: DraftItem) => ({ ...confirmedItemSchema.parse({ ...item, category: item.category || 'tshirt' }), key: item.key, category: item.category }))
+    return { analysis, items: items as DraftItem[], replaces: value.replaces as boolean | null }
+  } catch { return null }
+}
 const pendingKey = 'ecoscan.pending-analysis'
 function remembered() { try { return sessionStorage.getItem(pendingKey) } catch { return null } }
 function remember(id: string | null) { try { if (id) sessionStorage.setItem(pendingKey, id); else sessionStorage.removeItem(pendingKey) } catch { /* Storage is optional. */ } }
 export type Phase = 'upload' | 'uploading' | 'queued' | 'processing' | 'paused' | 'review' | 'confirming' | 'complete' | 'failed'
-export type DraftItem = { key: string; category: ClothingCategory | ''; quantity: number }
+export type DraftItem = { key: string; category: ClothingCategory | ''; quantity: number; materialProfile?: MaterialProfile }
 export function useScan(onConfirmed: () => void) {
-  const [pendingId, setPendingId] = useState(remembered)
-  const [phase, setPhase] = useState<Phase>(() => remembered() ? 'queued' : 'upload')
+  const [draft] = useState(reviewDraft)
+  const [pendingId, setPendingId] = useState(() => draft ? null : remembered())
+  const [phase, setPhase] = useState<Phase>(() => draft ? 'review' : remembered() ? 'queued' : 'upload')
   const [file, setFile] = useState<File | null>(null)
-  const [analysis, setAnalysis] = useState<AnalysisResponse | null>(null)
-  const [items, setItems] = useState<DraftItem[]>([])
-  const [replaces, setReplaces] = useState<boolean | null>(null)
+  const [analysis, setAnalysis] = useState<AnalysisResponse | null>(draft?.analysis ?? null)
+  const [items, setItems] = useState<DraftItem[]>(draft?.items ?? [])
+  const [replaces, setReplaces] = useState<boolean | null>(draft?.replaces ?? null)
   const [result, setResult] = useState<ConfirmScanResponse | null>(null)
   const [error, setError] = useState('')
   const [confirmation, setConfirmation] = useState<ConfirmScanRequest | null>(null)
+  useEffect(() => {
+    if (!analysis || !['review', 'confirming'].includes(phase)) return
+    try { sessionStorage.setItem(draftKey, JSON.stringify({ analysis, items, replaces, expiresAt: Date.now() + 15 * 60_000 })) } catch { /* Storage is optional. */ }
+  }, [analysis, items, replaces, phase])
   const busy = useRef(false)
   const generation = useRef(0)
   const retryId = useRef(pendingId)
@@ -59,7 +74,7 @@ export function useScan(onConfirmed: () => void) {
     setError('')
     if (!value) return
     if (!['image/jpeg', 'image/png', 'image/webp'].includes(value.type)) { setFile(null); setError('Choose a JPEG, PNG, or WebP image.'); return }
-    if (!value.size || value.size > 5 * 1024 * 1024) { setFile(null); setError('Choose an image between 1 byte and 5 MB.'); return }
+    if (!value.size || value.size > 4 * 1024 * 1024) { setFile(null); setError('Choose an image between 1 byte and 4 MB.'); return }
     setFile(value)
   }
   async function upload() {
@@ -80,24 +95,25 @@ export function useScan(onConfirmed: () => void) {
     const current = generation.current
     const input = confirmation ?? {
       analysisId: analysis.analysisId,
-      items: items.map(({ category, quantity }) => ({ category: category as ClothingCategory, quantity })),
+      items: items.map(({ category, quantity, materialProfile }) => ({ category: category as ClothingCategory, quantity, materialProfile })),
       replacesPlannedNewPurchase: replaces,
     }
     busy.current = true; setConfirmation(input); setPhase('confirming'); setError('')
     try {
       const value = await api.confirm(input)
       if (current !== generation.current) return false
-      setResult(value); setPhase('complete'); remember(null); setConfirmation(null); onConfirmed()
+      setResult(value); setPhase('complete'); remember(null); try { sessionStorage.removeItem(draftKey) } catch {} setConfirmation(null); onConfirmed()
       return true
     } catch (cause) {
       if (current !== generation.current) return false
       setError(messageOf(cause)); setPhase('review')
-      if (cause instanceof ApiError && cause.status === 400) setConfirmation(null)
+      if (cause instanceof ApiError && [400, 404, 410].includes(cause.status)) setConfirmation(null)
       return false
     } finally { if (current === generation.current) busy.current = false }
   }
   function reset(force = false) {
     if (busy.current && !force) return
+    try { sessionStorage.removeItem(draftKey); for (let i = sessionStorage.length - 1; i >= 0; i--) { const key = sessionStorage.key(i); if (key?.startsWith('ecoscan.material.')) sessionStorage.removeItem(key) } } catch {}
     generation.current++; busy.current = false
     retryId.current = null; setPendingId(null); remember(null); setFile(null); setAnalysis(null); setItems([])
     setReplaces(null); setResult(null); setConfirmation(null); setError(''); setPhase('upload')

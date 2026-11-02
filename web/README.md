@@ -19,7 +19,7 @@ Home → Scan clothes → Select/capture photo → Scanning → Review items and
 
 Recognition never silently awards points. The review screen labels mock recognition explicitly. A result with zero points remains a useful estimate. Reward prices and balances come from the backend; this UI does not recalculate or store its own authoritative balance.
 
-The user can navigate between pages while a queued scan runs. The pending analysis ID is retained in sessionStorage so a queued scan can resume after reload. Images and editable review drafts are not persisted in browser storage, so refreshing can lose local review edits. The Results page fetches the latest confirmed estimate from the backend after a refresh. The Account page supports signup and login; an account restores the server-owned demo balance and latest estimate. A full scan history is not implemented.
+Review text drafts are retained in sessionStorage for this tab; photos are not persisted. The latest result and demo balance belong to the anonymous browser session. There are no accounts or cross-device recovery.
 
 If confirmation has an uncertain outcome, the UI holds the submitted items unchanged and offers a retry of the same request. The backend's idempotency returns the original result. Redeeming an offer requires a second confirmation, disables repeat clicks, and refreshes the balance afterward.
 

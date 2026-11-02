@@ -11,7 +11,11 @@ const questions = [
   },
   {
     question: 'How do I earn demo points?',
-    answer: 'An unchanged live AI suggestion can earn demo points when it replaces a new purchase you had already planned. Each image can earn only once per session or account. Edited, manual, duplicate, mock, or non-replacement scans still show an estimate but earn zero points.',
+    answer: 'An unchanged live AI suggestion can earn demo points when it replaces a new purchase you had already planned. Similar images are checked across browser sessions for 90 days, including common rotations and background crops. Daily demo earnings are capped at 250 points per browser session. Edited, manual, duplicate, mock, or non-replacement scans still show an estimate but earn zero points.',
+  },
+  {
+    question: 'What is a partner-confirmed activity?',
+    answer: 'An approved partner can confirm its own completed repair, secondhand purchase, accepted donation, or recycling transaction using a short-lived code. Only the partner can confirm it; photos and self-declarations cannot. Activity credits are recorded separately from demo points and cannot redeem offers. Partner activity does not prove exact CO₂ savings or garment ownership.',
   },
   {
     question: 'Can I redeem these offers in a real shop?',
@@ -19,11 +23,11 @@ const questions = [
   },
   {
     question: 'What happens to my photo?',
-    answer: 'When AI recognition is enabled, EcoScan sends the photo to OpenAI for analysis. EcoScan deletes its temporary queued copy after processing, final failure, or expiry within one day, but keeps a one-way image hash to prevent duplicate points in the session or account. OpenAI may retain API content in abuse-monitoring logs for up to 30 days by default. Do not upload people, documents, or sensitive information.',
+    answer: 'When AI recognition is enabled, EcoScan sends the photo to OpenAI for analysis. EcoScan deletes its temporary queued copy after processing, final failure, or scheduled expiry cleanup, but keeps pixel and perceptual fingerprints for 90 days to reduce repeated claims across browser sessions. OpenAI may retain API content in abuse-monitoring logs for up to 30 days by default. Do not upload people, documents, or sensitive information.',
   },
   {
     question: 'Will my result and points still be here later?',
-    answer: 'Yes. Your latest confirmed estimate and demo points can be reopened after a refresh. An anonymous browser session expires after inactivity; a signed-in account keeps its latest estimate and balance across visits. EcoScan does not yet show a full scan history.',
+    answer: 'Your latest estimate and demo points survive a refresh while this anonymous session remains active. Results and balances cannot be recovered after session expiry. For each redeemed offer, you can separately generate and download a private recovery key before losing the session. That key retrieves a read-only receipt for 180 days after issuance, including on another browser. It does not restore points, permit voucher use or refunds, or require an account.',
   },
 ]
 

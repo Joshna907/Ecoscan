@@ -1,3 +1,4 @@
+import { assertSchemaReady } from './schemaReadiness.js'
 import { existsSync } from 'node:fs'
 import { setTimeout as delay } from 'node:timers/promises'
 import { Pool } from 'pg'
@@ -9,8 +10,8 @@ import { PostgresVisionAdmission, VisionAdmissionError } from './services/vision
 
 if (existsSync('.env')) process.loadEnvFile('.env')
 if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required for the recognition worker')
-const pool = new Pool({ connectionString: process.env.DATABASE_URL, max: 4 })
-await pool.query('SELECT 1 FROM eco_recognition_jobs LIMIT 0')
+const pool = new Pool({ connectionString: process.env.DATABASE_URL, max: 4, connectionTimeoutMillis: 10_000, statement_timeout: 15_000 })
+await assertSchemaReady(pool)
 const config = loadReliabilityConfig()
 const admission = new PostgresVisionAdmission(pool, config)
 const worker = new RecognitionWorker(new PostgresRecognitionJobs(pool, config), selectRecognizer(), admission)

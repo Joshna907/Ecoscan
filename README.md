@@ -1,134 +1,69 @@
-# EcoScan
+# EcoScan — clothing carbon screening
 
-**See your clothes. Understand an estimate. Explore another way to wear them.** EcoScan turns a clothing photo into reviewable item suggestions, illustrative production-carbon estimates, a reuse comparison, demo points, and fictional offers.
-
-This is a take-home prototype. A photograph cannot reveal a garment's exact material, supply chain, lifetime, or prove that a new purchase was avoided. EcoScan presents estimates and scenarios, not measured emissions savings or carbon credits.
-
-## The experience
-
-1. Upload a JPEG, PNG, or WebP image (up to 5 MB), or take a photo with the camera.
-2. Wait for suggested T-shirts, jeans, jackets, or shoes. Review the categories and quantities. Manual corrections still receive an estimate but are not reward-eligible.
-3. Choose whether wearing those clothes again would replace a new purchase you had already planned.
-4. See the item breakdown, total estimate, optional avoided-production scenario, and demo points.
-5. Explore example offers. A redemption saves a reference and downloadable **sample** PDF; it issues no real voucher.
-6. Sign up to retain a demo balance and latest confirmed result across visits. Anonymous sessions expire.
-
-```text
-React browser ── /api ──► Express API ──► PostgreSQL
-                             │                 ▲
-                             └── scan job ──► worker ──► image recognizer
-                                                  │
-                                        clothing suggestions only
-
-The API calculates estimates after review. Demo points require an unchanged live-AI suggestion, a planned-purchase replacement choice, and an image that has not already earned points in the session or account.
-```
+Upload a clothing photo, review categories, optionally read its care label, confirm fibre blends and weight, and see sourced screening ranges. Explore fictional demo rewards without signing up.
 
 ## Run locally
 
-**Prerequisites:** Node.js 22 and npm; Docker Desktop with its engine running for the PostgreSQL-backed journey. An OpenAI API key is optional for local setup. Mock mode accepts images but always suggests one T-shirt.
-
-These commands use PowerShell. Run them from the repository root.
-
-### 1. Install dependencies and start the database
+Node.js 22 and npm are required. Use PostgreSQL for durable anonymous sessions; memory mode is available for an offline demo.
 
 ```powershell
-git clone https://github.com/Joshna907/Ecoscan.git
-cd Ecoscan
 npm ci
+Copy-Item backend/.env.example backend/.env
 docker compose up -d postgres
 ```
 
-PostgreSQL is available at `localhost:5433`. `compose.yaml` uses local development credentials and a named data volume.
-
-### 2. Configure the API
+Set DATA_STORE=postgres, DATABASE_URL, RATE_LIMIT_HASH_KEY (random, at least 32 characters), and VISION_PROVIDER=mock in backend/.env. For live recognition use VISION_PROVIDER=openai and OPENAI_API_KEY. Never expose secrets in frontend variables. Accounts/passwords/JWT secrets are not used.
 
 ```powershell
-Copy-Item backend/.env.example backend/.env
-node -e "console.log(require('node:crypto').randomBytes(32).toString('base64url'))"
-node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
+npm run release:prepare -w api
+npm run dev:api
+npm run dev:worker
+npm run dev:web
 ```
 
-Edit `backend/.env`: set `AUTH_JWT_SECRET` to the first generated value and `RATE_LIMIT_HASH_KEY` to the second. Keep `DATA_STORE=postgres` and the example `DATABASE_URL` for local Docker. For an offline demo, set `VISION_PROVIDER=mock`. For actual photo recognition, keep `VISION_PROVIDER=openai` and add your key as `OPENAI_API_KEY`; see [OpenAI setup](docs/OPENAI_SETUP.md). **Never commit `backend/.env` or put the key in frontend code.**
+Run API, worker and web in separate terminals. Open http://localhost:5173. API: http://localhost:5000. For memory mode set DATA_STORE=memory; no worker/database is needed. Memory state disappears on restart.
 
-### 3. Apply migrations and start the app
+## Product behavior
 
-```powershell
-npm run db:migrate -w api
-```
+- JPEG, PNG and WebP uploads up to 4 MiB, with bounded decoding, orientation normalization and metadata removal for garment and care-label images.
+- Category recognition never establishes material composition. OCR suggestions require user review; the label preview can be zoomed.
+- Whole-item blends or measured shell/lining/padding/upper/sole components are supported. Missing/unsupported material mass is excluded and coverage is visible.
+- Review and material text drafts survive a refresh in this tab. Label photo bytes are not put in browser storage; reattach the photo after refresh if needed.
+- Results show low/central/high screening scenarios with versioned provenance and separate whole-garment benchmarks and fibre-stage estimates.
+- Anonymous HTTP-only browser sessions hold results, demo points and receipts. They expire after inactivity. There are no logins or passwords. A separately saved private key can recover a read-only receipt across browsers; results and balances cannot be restored.
+- Common cropped/rotated/resized/recompressed reuploads are checked across sessions for 90 days. Limits reduce abuse but do not verify ownership, one person per browser, or avoided purchases.
+- Fictional offers have demo partner terms, finite inventory, expiry, single-use fulfilment, idempotent redemption retries and unused-voucher refunds. See [the offer lifecycle and real-provider requirements](docs/ANONYMOUS_REWARDS.md).
 
-Open three terminals in the repository root:
+## Carbon assumptions
 
-| Terminal | Command | Purpose |
-| --- | --- | --- |
-| 1 | `npm run dev:api` | API at <http://localhost:5000> |
-| 2 | `npm run dev:worker` | Processes queued image jobs |
-| 3 | `npm run dev:web` | Site at **<http://localhost:5173>** |
+The assignment's illustrative per-item benchmarks remain: T-shirt 5, jeans 10, jacket 15 and shoes 8 kg CO2e. Category sensitivity bounds are 60–160% of these values. They are not a measured product LCA.
 
-Vite proxies `/api` to the API in development, preserving same-origin cookies. In PostgreSQL mode, an upload returns a queued analysis; the worker makes it ready for review. If an analysis remains queued, check terminal 2. `GET /api/health` checks the process; `GET /api/ready` also checks its database connection.
+The sourced fibre dataset and measured/default weights produce a separate material-stage estimate, never added to the overlapping category benchmark. See [methodology and source limitations](docs/MATERIAL_METHODOLOGY.md). Low/high values are sensitivity scenarios, not statistical confidence limits. Unknown factors remain unavailable rather than guessed.
 
-**Without Docker:** set `DATA_STORE=memory`, `VISION_PROVIDER=mock`, and leave `DATABASE_URL` empty in `backend/.env`. Run only the API and web terminals. This mode has no accounts, processes recognition during upload, and loses all state on restart.
+When a planned-purchase replacement scenario is selected, the comparison is half the category benchmark. Unchanged live-recognition suggestions can earn round(comparison × 10) demo points, capped at 250 per browser session per UTC day. Material/weight entries never raise rewards. Corrected, manual, mock, duplicate and non-replacement scans receive no points. These rules do not verify real savings.
 
-## Run the checks
+## Validation and releases
 
 ```powershell
 npm run typecheck
 npm test
-npm run build:web
 npm run test:web
+npm run build:web
 npm run lint -w web
 ```
 
-The default backend run skips PostgreSQL integration tests. To include them while Docker PostgreSQL is running:
+For integration tests, pre-migrate a disposable database and set TEST_DATABASE_URL to it. Never point tests at production. CI supplies a disposable PostgreSQL service. The release smoke test covers schema readiness, cleanup, upload, confirmation, result restoration and redemption using stubbed recognition.
 
-```powershell
-$env:TEST_DATABASE_URL='postgresql://ecoscan:ecoscan@localhost:5433/ecoscan'
-npm test
-Remove-Item Env:TEST_DATABASE_URL
-```
+`npm run release:prepare -w api` applies pending migrations and runs that smoke test. Migration 010 retires account credential tables: deploy it together with the anonymous application. Historical migrations stay for reproducible upgrades.
 
-Tests create and clean up their own rows. Never point `TEST_DATABASE_URL` at production. Frontend tests simulate API responses; they do not test physical camera hardware or a live OpenAI account.
+Vercel requires CRON_SECRET for authenticated scheduled cleanup. Partner fulfilment requires a separate PARTNER_API_SECRET. Hosting secrets and commercial provider onboarding are not created by this repository. See [deployment instructions](docs/VERCEL.md).
 
-## Carbon and reward assumptions
+## Next production steps
 
-The versioned [`demo-v2` catalogue](backend/src/domain/carbonCatalogue.ts) stores illustrative category benchmarks for a comparable new item:
+Use private expiring object storage at scale, indexed similarity candidate lookup, independent activity verification before real rewards, contracted partner fulfilment and provider reconciliation, and real-device/accessibility/load testing. Supplier-specific lifecycle data is needed before making accurate product comparisons or verified emissions claims.
+# Partner-confirmed activities
 
-| Item | Estimated production |
-| --- | ---: |
-| T-shirt | 5 kg CO₂e |
-| Jeans | 10 kg CO₂e |
-| Jacket | 15 kg CO₂e |
-| Shoes | 8 kg CO₂e |
+Rewards now supports an independent activity-evidence ledger for completed partner repairs, secondhand purchases, accepted donations and recycling. It uses short-lived user codes and signed partner confirmations; photos cannot credit it. Activity credits stay separate from demo points and are not redeemable. No partner is configured by default. See [setup, signing protocol, reversals and limits](docs/ACTIVITY_VERIFICATION.md). Apply migration `011` before deploying.
+# Receipt recovery and fraud review
 
-The [calculation](backend/src/domain/calculateEstimate.ts) multiplies each value by the confirmed quantity and sums the items. When the user selects the planned-purchase comparison, `possible avoided production = total × 0.5`; otherwise it is zero. An unchanged live-AI suggestion can receive `demo points = round(possible avoided kg CO₂e × 10)`. Manual, corrected, mock, duplicate-image, and non-replacement scans receive zero points. A scan is capped at ten total items.
-
-For example, one unchanged live-AI T-shirt suggestion gives a **5 kg CO₂e category benchmark**, a **2.5 kg CO₂e hypothetical avoided-production scenario**, and **25 demo points** when that comparison is selected. The 50% factor and point rate are assumptions, not verified savings. The image model only suggests categories; it never assigns a carbon value or points. The fictional offers cost 25, 60, and 100 points. Redeeming one deducts demo points and creates a sample receipt without partner fulfilment.
-
-## Code structure and design decisions
-
-| Directory | Responsibility |
-| --- | --- |
-| `web/src/` | React pages, camera/upload journey, results, rewards, and account UI |
-| `api/index.ts` | Vercel function entry point |
-| `backend/src/routes/` | HTTP validation and responses |
-| `backend/src/services/` | Scan, recognition-job, auth, and offer workflows |
-| `backend/src/domain/` | Carbon, points, and offer rules |
-| `backend/src/store/` | Memory and PostgreSQL adapters |
-| `backend/db/` | Versioned SQL migrations |
-| `shared/src/` | Request and response schemas used by API and web |
-| `backend/tests/`, `web/tests/` | Backend and frontend tests |
-
-The API is a modular application rather than a collection of microservices. PostgreSQL stores accounts, revocable JWT login sessions, balances, redemptions, the latest confirmed estimate, recognition jobs, and one-way image hashes used to prevent duplicate point claims within a session or account. Confirmation and redemption use transactions to protect points from retries and concurrent requests. Workers use leases and shared limits. Photos are temporarily kept in PostgreSQL until processing or expiry; this keeps the initial deployment simple but increases database size and backup exposure. See [architecture](docs/ARCHITECTURE.md) and [backend reliability](docs/BACKEND_RELIABILITY.md).
-
-## Deploy on Vercel and Neon
-
-[Deploy the full demo](docs/VERCEL.md) using `vercel.json`, the `api/index.ts` function, and Neon PostgreSQL. Photo recognition runs within the upload request rather than a continuous worker. Apply migrations through Neon's direct connection; configure the Vercel function with its pooled connection. A separate [Compose deployment](docs/DEPLOYMENT.md) runs the backend and worker on a self-hosted machine.
-
-## Improvements beyond the prototype
-
-- **More useful estimates:** incorporate sourced material, weight, manufacturing region, and garment-condition data; show ranges, provenance, and comparisons with similar new clothing. Keep hypothetical avoided purchases separate from verified savings.
-- **Scaling:** add API and worker instances when request latency or queue delay warrants it. They already coordinate through PostgreSQL. Move temporary photos to private object storage with expiry when database write load or backup size becomes a bottleneck. Monitor queue age, database latency, provider failures and spend, and unusual point activity.
-- **External integrations:** a lifecycle-data API could replace placeholder values with versioned, cached estimates and explicit fallbacks. A real offer provider would need inventory, eligibility checks, redemption idempotency, fraud controls, and reconciliation. Neither integration is claimed in this demo.
-
-## Further reading
-
-[Frontend UX](web/README.md) · [API contract and architecture](docs/ARCHITECTURE.md) · [Service layer](docs/SERVICE_LAYER.md) · [Reliability](docs/BACKEND_RELIABILITY.md) · [OpenAI setup](docs/OPENAI_SETUP.md) · [Vercel deployment](docs/VERCEL.md)
+Users can save a private receipt recovery key and later retrieve a read-only receipt without logging in. Restricted operators can review suspicious attempts, apply/release holds, and inspect decision history. Apply migration `012`; see [recovery, operator setup and monitoring](docs/RECOVERY_AND_FRAUD_REVIEW.md). Scoring now identifies missing fibre/component mass explicitly; [the source review](docs/FACTOR_REVIEW_2026-11-02.md) explains why no new generic elastane factor was approved.

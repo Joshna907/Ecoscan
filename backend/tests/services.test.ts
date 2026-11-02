@@ -5,7 +5,7 @@ import { OfferService } from '../src/services/offerService'
 import { DemoSessionStore } from '../src/store/demoSessions'
 import { mockRecognizer } from '../src/services/vision/mockRecognizer'
 import { reliabilityConfigSchema } from '../src/config'
-import { verifiedRecognizer } from './helpers'
+import { PNG_1X1, verifiedRecognizer } from './helpers'
 
 async function setup() {
   const store = new DemoSessionStore()
@@ -19,7 +19,7 @@ async function setup() {
 async function analyse(service: AnalysisService, sessionId: string) {
   const release = await service.reserveUpload(sessionId)
   try {
-    const result = await service.analyse(sessionId, Buffer.from('validated image'), 'image/png')
+    const result = await service.analyse(sessionId, PNG_1X1, 'image/png')
     if (!result) throw new Error('Unexpected cancellation')
     return result
   } finally { await release() }
@@ -64,7 +64,7 @@ describe('application workflows without HTTP', () => {
     expect((await offers.redeem(sessionId, 'swap-pass')).demoPointsBalance).toBe(40)
     expect(await scans.confirm(sessionId, input)).toEqual(original)
     expect((await offers.list(sessionId)).demoPointsBalance).toBe(40)
-    await expect(offers.redeem(sessionId, 'swap-pass')).rejects.toMatchObject({ code: 'ALREADY_REDEEMED' })
+    expect((await offers.redeem(sessionId, 'swap-pass')).demoPointsBalance).toBe(40)
   })
 
   it('enforces validation and ownership for callers outside Express', async () => {
@@ -123,9 +123,18 @@ describe('application workflows without HTTP', () => {
     } })
     const release = await analyses.reserveUpload(sessionId)
     try {
-      expect(await analyses.analyse(sessionId, Buffer.from('image'), 'image/png', { isCancelled: () => cancelled })).toBeUndefined()
+      expect(await analyses.analyse(sessionId, PNG_1X1, 'image/png', { isCancelled: () => cancelled })).toBeUndefined()
     } finally { await release() }
     const next = new AnalysisService(store, mockRecognizer)
     expect((await analyse(next, sessionId)).needsReview).toBe(true)
   })
+  it('rejects material changes on confirmation replay', async () => {
+    const { analyses, scans, sessionId } = await setup()
+    const analysis = await analyse(analyses, sessionId)
+    const materialProfile = { composition: [{ material: 'cotton', percentage: 100 }], source: 'manual', userConfirmed: true, weightGrams: 200 }
+    const input = { ...confirmation(analysis.analysisId), items: [{ category: 'jeans', quantity: 2, materialProfile }] }
+    await scans.confirm(sessionId, input)
+    await expect(scans.confirm(sessionId, { ...input, items: [{ ...input.items[0], materialProfile: { ...materialProfile, weightGrams: 1000 } }] })).rejects.toMatchObject({ code: 'CONFIRMATION_CONFLICT' })
+  })
+
 })

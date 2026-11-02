@@ -1,13 +1,12 @@
+import { postgresRuntime } from './postgresRuntime.js'
+import { assertSchemaReady } from './schemaReadiness.js'
 import { existsSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { join } from 'node:path'
 import { createApp } from './app.js'
 import { loadReliabilityConfig } from './config.js'
 import { Pool } from 'pg'
-import { PostgresSessionStore } from './store/postgresSessions.js'
 import { PostgresRecognitionJobs } from './services/recognitionJobs.js'
-import { PostgresScanRateLimiter, PostgresUploadGate } from './middleware/postgresTrafficControl.js'
-import { AuthService } from './services/authService.js'
 
 if (existsSync('.env')) process.loadEnvFile('.env')
 
@@ -26,22 +25,17 @@ if (storeMode !== 'memory' && storeMode !== 'postgres') throw new Error('DATA_ST
 if (process.env.NODE_ENV === 'production' && storeMode !== 'postgres') throw new Error('Production requires DATA_STORE=postgres')
 if (storeMode === 'postgres' && !process.env.DATABASE_URL) throw new Error('DATABASE_URL is required when DATA_STORE=postgres')
 if (storeMode === 'postgres' && !process.env.RATE_LIMIT_HASH_KEY) throw new Error('RATE_LIMIT_HASH_KEY is required when DATA_STORE=postgres')
-if (storeMode === 'postgres' && !process.env.AUTH_JWT_SECRET) throw new Error('AUTH_JWT_SECRET is required when DATA_STORE=postgres')
-const pool = storeMode === 'postgres' ? new Pool({ connectionString: process.env.DATABASE_URL, max: 10 }) : undefined
-if (pool) await pool.query('SELECT 1 FROM eco_scan_rate_buckets LIMIT 0')
+const pool = storeMode === 'postgres' ? new Pool({ connectionString: process.env.DATABASE_URL, max: 10, connectionTimeoutMillis: 10_000, statement_timeout: 15_000 }) : undefined
+if (pool) await assertSchemaReady(pool)
 const staticDir = process.env.SERVE_WEB === 'true' ? fileURLToPath(new URL('../../web/dist/', import.meta.url)) : undefined
 if (staticDir && !existsSync(join(staticDir, 'index.html'))) {
   throw new Error('SERVE_WEB=true requires a built web/dist directory; run npm run build:web')
 }
 const app = createApp(undefined, {
   config,
-  store: pool ? new PostgresSessionStore(pool, config) : undefined,
+  ...(pool ? postgresRuntime(pool, config) : {}),
   jobs: pool ? new PostgresRecognitionJobs(pool, config) : undefined,
-  rateLimiter: pool ? new PostgresScanRateLimiter(pool, config, process.env.RATE_LIMIT_HASH_KEY!) : undefined,
-  uploadGate: pool ? new PostgresUploadGate(pool, config.maxConcurrentScans) : undefined,
-  readiness: pool ? async () => { await pool.query('SELECT 1') } : undefined,
   trustedProxyHops,
-  auth: pool ? new AuthService(pool, process.env.AUTH_JWT_SECRET!) : undefined,
   staticDir,
 })
 const cleanup = setInterval(() => { void app.locals.cleanup().catch(() => console.error('EcoScan cleanup failed')) }, config.cleanupIntervalMs)

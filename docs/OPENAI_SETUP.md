@@ -22,7 +22,7 @@ The key belongs only on the backend. Do not paste it into chat, put it in the Re
 
 ## What happens during a scan
 
-1. `POST /api/analyses` accepts one JPEG, PNG, or WebP file, at most 5 MB.
+1. `POST /api/analyses` accepts one JPEG, PNG, or WebP file, at most 4 MiB.
 2. The backend checks the declared MIME type and file signature. In PostgreSQL mode it stores the image bytes privately in the job table until a worker processes or expires the job; in memory mode it calls OpenAI during the request.
 3. OpenAI returns category suggestions from `tshirt`, `jeans`, `jacket`, and `shoes`. Unknown or unclear garments are omitted. The server caps the returned list at ten items.
 4. In PostgreSQL mode, the upload returns `202 queued`; poll `GET /api/analyses/:analysisId` until `ready`. The ready result has `recognitionMode: "vision"` and `needsReview: true`. A later confirmation always produces a deterministic category estimate; corrections make the scan ineligible for points.

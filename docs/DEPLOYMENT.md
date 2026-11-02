@@ -15,7 +15,6 @@ Copy `.env.production.example` to `.env.production`. Generate **different** 32-b
 node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
 ```
 
-Generate a separate base64url JWT secret with `node -e "console.log(require('node:crypto').randomBytes(32).toString('base64url'))"` and set `AUTH_JWT_SECRET`. Hexadecimal values for the other secrets avoid URL escaping problems in `DATABASE_URL`. The environment file is ignored by Git. For actual clothing recognition, set `VISION_PROVIDER=openai` and supply `OPENAI_API_KEY`. `mock` is useful only for a smoke test: it suggests a T-shirt for every accepted image. Do not claim that a mock result came from image recognition.
 
 If an HTTPS reverse proxy is the only way clients can reach the API, set `TRUST_PROXY_HOPS=1` for one proxy hop. The proxy must replace incoming `X-Forwarded-For` and set `X-Forwarded-Proto`; otherwise a caller can manipulate the IP used for scan limits. Leave the value at `0` when there is no trusted proxy. Set it to the actual number of trusted hops (maximum 3) only when the network path is controlled. Production cookies have the `Secure` flag and require HTTPS for normal browser use.
 
@@ -41,7 +40,6 @@ Try the complete upload, status, confirmation, and offers flow over the **HTTPS 
 ## Operating the service
 
 - Scale workers when queue delay and provider capacity show a need: `docker compose --env-file .env.production -f compose.prod.yaml up -d --scale worker=2`. Worker copies claim jobs with PostgreSQL row locks and share the recognition concurrency/call budget.
-- This Compose example exposes one API copy on one host port. To add API copies, put them behind a load balancer or orchestration platform and connect all copies to the same PostgreSQL database, `RATE_LIMIT_HASH_KEY`, and `AUTH_JWT_SECRET`. Verify forwarded IP handling and per-instance readiness checks before sending traffic.
 - Run migrations as a separate release step. They use an advisory lock and track applied files. Use backward-compatible migrations during rolling upgrades; do not assume all API copies change version simultaneously.
 - Monitor API readiness, request status/error codes and duration, queue delay, failed analyses, worker restarts, PostgreSQL availability/storage, and OpenAI usage and spend. `X-Request-ID` links a response to its structured request log without logging image contents or keys.
 - Back up PostgreSQL on a schedule and test a restore. Deleting the named Compose volume deletes the stored sessions, balances, jobs, and redemptions. Protect backups because they may contain temporarily queued images.

@@ -1,4 +1,5 @@
-import { createHash, randomUUID } from 'node:crypto'
+import { rewardImageFingerprint } from './rewardImage.js'
+import { randomUUID } from 'node:crypto'
 import { Pool, type PoolClient } from 'pg'
 import { analysisJobStatusSchema, analysisResponseSchema, type AnalysisJobStatus, type AnalysisResponse } from '../../../shared/src/index.js'
 import type { ReliabilityConfig } from '../config.js'
@@ -45,7 +46,7 @@ export class PostgresRecognitionJobs implements RecognitionJobs {
 
   async enqueue(sessionId: string, image: Buffer, mimeType: string): Promise<{ analysisId: string; status: 'queued' }> {
     const analysisId = randomUUID()
-    const imageHash = createHash('sha256').update(image).digest('hex')
+    const imageHash = await rewardImageFingerprint(image)
     await this.transaction(async (client) => {
       // Serialize admission across API copies so the database image budget is bounded.
       await client.query('SELECT pg_advisory_xact_lock(17028103)')

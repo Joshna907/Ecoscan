@@ -29,7 +29,7 @@ export function buildDemoReceiptPdf(offer: RedeemedOffer): jsPDF {
   pdf.text('For demonstration only. This is not a voucher or proof of purchase.', 22, 67)
 
   pdf.setFillColor(233, 240, 224)
-  pdf.roundedRect(22, 82, 166, 75, 4, 4, 'F')
+  pdf.roundedRect(22, 82, 166, 95, 4, 4, 'F')
   pdf.setTextColor(39, 72, 50)
   pdf.setFont('helvetica', 'bold')
   pdf.setFontSize(15)
@@ -40,10 +40,12 @@ export function buildDemoReceiptPdf(offer: RedeemedOffer): jsPDF {
   pdf.text(`Redeemed: ${redeemedAt}`, 30, 127)
   pdf.text(`Reference: ${offer.receipt.reference}`, 30, 141)
 
+  pdf.text('Status: ' + (offer.receipt.status ?? 'issued'), 30, 153)
+  if (offer.receipt.expiresAt) pdf.text('Expires: ' + new Date(offer.receipt.expiresAt).toLocaleDateString('en-IN'), 30, 165)
   pdf.setTextColor(72, 82, 73)
   pdf.setFontSize(10)
-  pdf.text('No product, pass, discount, or partner benefit is issued by this demo.', 22, 178)
-  pdf.text('The points and offers shown in EcoScan are illustrative.', 22, 186)
+  pdf.text('No product, pass, discount, or partner benefit is issued by this demo.', 22, 193)
+  pdf.text('The points and offers shown in EcoScan are illustrative.', 22, 201)
   return pdf
 }
 

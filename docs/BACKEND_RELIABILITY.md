@@ -31,7 +31,7 @@ Each session owns analysis records. The in-memory adapter uses a map and creates
 - Reviews expire after 15 minutes by default. While an expiry marker remains, confirmation returns `410 ANALYSIS_EXPIRED`.
 - Confirmed analysis records are retained for 60 minutes after confirmation to support safe retries. A separate latest-result snapshot remains on the session after that record is removed. Expiry markers are retained for 60 minutes after the review deadline. Removed records return `404 ANALYSIS_NOT_FOUND`; removal never makes their IDs valid again.
 - An idle anonymous session expires after 30 minutes, including its points and latest result. In-memory mode also clears them on restart. PostgreSQL account sessions keep the balance and latest result across visits. Requests refresh anonymous-session activity; an admitted upload pins its session until it settles or its database lease expires.
-- An analysis ID from another session returns 404. Signed-in users can access only the account session associated with their login.
+- An analysis ID from another session returns 404.
 
 The scan confirmation contract is described by the schemas in `shared/src/index.ts`. The response shape has not changed. Offer redemption still rejects repeats with `409 ALREADY_REDEEMED`; replaying a confirmation does not repeat a redemption.
 

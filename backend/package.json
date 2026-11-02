@@ -7,22 +7,24 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "start": "tsx src/server.ts",
-    "test": "vitest run",
+    "test": "vitest run --no-file-parallelism",
     "typecheck": "tsc --noEmit",
     "db:migrate": "tsx src/migrate.ts",
     "worker": "tsx src/worker.ts",
-    "dev:worker": "tsx watch src/worker.ts"
+    "dev:worker": "tsx watch src/worker.ts",
+    "release:check": "tsx src/releaseCheck.ts",
+    "release:prepare": "npm run db:migrate && npm run release:check"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "express": "^5.3.0",
-    "jose": "^6.2.13",
     "multer": "^2.5.0",
     "openai": "^7.43.0",
     "pg": "^8.23.1",
     "shared": "*",
+    "sharp": "^0.35.5",
     "tsx": "^4.23.15",
     "zod": "^4.6.7"
   },

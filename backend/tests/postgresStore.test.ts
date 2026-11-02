@@ -188,4 +188,44 @@ databaseTests('PostgreSQL persistence across API copies', () => {
     await expect(firstAdmission.acquire()).rejects.toMatchObject({ code: 'VISION_BUDGET_EXHAUSTED' })
     await firstPool.query('DELETE FROM eco_vision_daily_usage WHERE day = current_date')
   })
+  it('serializes the same visual claim across sessions and retains it after session deletion', async () => {
+    const sessions = await Promise.all([first.getOrCreate(undefined), second.getOrCreate(undefined)])
+    const hash = 'integration-' + randomUUID()
+    const ids = [randomUUID(), randomUUID()]
+    try {
+      await Promise.all(sessions.map((owner, i) => first.addAnalysis(owner, ids[i], {
+        imageHash: hash, recognitionMode: 'vision', suggestions: [{ id: '1', category: 'tshirt' }],
+      })))
+      const results = await Promise.all(sessions.map((owner, i) => new ScanService(i ? second : first).confirm(owner, {
+        analysisId: ids[i], items: [{ category: 'tshirt', quantity: 1 }], replacesPlannedNewPurchase: true,
+      })))
+      expect(results.map(result => result.demoPointsAwarded).sort()).toEqual([0, 25])
+      await firstPool.query('DELETE FROM eco_sessions WHERE id = ANY($1::uuid[])', [sessions])
+      const retained = await firstPool.query('SELECT session_id FROM eco_visual_reward_claims WHERE image_hash = $1', [hash])
+      expect(retained.rows).toEqual([{ session_id: null }])
+    } finally {
+      await firstPool.query('DELETE FROM eco_sessions WHERE id = ANY($1::uuid[])', [sessions])
+      await firstPool.query('DELETE FROM eco_visual_reward_claims WHERE image_hash = $1', [hash])
+    }
+  })
+  it('serializes daily reward limits across API copies without stopping estimates', async () => {
+    const owner = await first.getOrCreate(undefined)
+    const hashes = Array.from({ length: 3 }, () => 'daily-' + randomUUID())
+    const ids = hashes.map(() => randomUUID())
+    try {
+      await Promise.all(ids.map((id, i) => first.addAnalysis(owner, id, {
+        imageHash: hashes[i], recognitionMode: 'vision',
+        suggestions: [{ id: '1', category: 'jeans' }, { id: '2', category: 'jeans' }],
+      })))
+      const results = await Promise.all(ids.map((id, i) => new ScanService(i % 2 ? first : second).confirm(owner, {
+        analysisId: id, items: [{ category: 'jeans', quantity: 2 }], replacesPlannedNewPurchase: true,
+      })))
+      expect(results.reduce((sum, result) => sum + result.demoPointsAwarded, 0)).toBe(200)
+      expect(results.find(result => result.rewardStatus === 'reward_limit')?.totalEstimatedProductionKgCo2e).toBe(20)
+    } finally {
+      await firstPool.query('DELETE FROM eco_visual_reward_claims WHERE session_id = $1', [owner])
+      await firstPool.query('DELETE FROM eco_sessions WHERE id = $1', [owner])
+    }
+  })
+
 })

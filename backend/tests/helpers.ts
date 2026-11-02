@@ -3,7 +3,7 @@ import { mockRecognizer } from '../src/services/vision/mockRecognizer'
 import type { ClothingRecognizer } from '../src/services/vision/types'
 
 export const PNG_1X1 = Buffer.from(
-  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/lXcAAAAASUVORK5CYII=', 'base64',
+  'iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAE0lEQVQImWP4z8DwnwGM/zMwAAAf7gP9qS/A4gAAAABJRU5ErkJggg==', 'base64',
 )
 
 export const verifiedRecognizer: ClothingRecognizer = {

@@ -1,3 +1,5 @@
+import { MAX_UPLOAD_BYTES } from '../../../shared/src/index.js'
+import { normalizeImage } from '../services/imageInput.js'
 import { Router, type Request, type Response } from 'express'
 import multer from 'multer'
 import type { ResolveSession } from '../middleware/sessionContext.js'
@@ -6,7 +8,7 @@ import { hasSupportedImageSignature } from './imageValidation.js'
 import { HttpError } from '../httpError.js'
 import type { RequestHandler } from 'express'
 
-const MAX_IMAGE_BYTES = 5 * 1024 * 1024
+const MAX_IMAGE_BYTES = MAX_UPLOAD_BYTES
 
 export interface ScanRateControl { middleware: RequestHandler }
 export interface ScanUploadGate {
@@ -54,7 +56,8 @@ export function createAnalysisRouter(
       if (!hasSupportedImageSignature(request.file)) {
         throw new HttpError(415, 'UNSUPPORTED_IMAGE', 'Upload a JPEG, PNG, or WebP image.')
       }
-      const submission = await service.submit(sessionId, request.file.buffer, request.file.mimetype, {
+      const normalized = await normalizeImage(request.file.buffer)
+      const submission = await service.submit(sessionId, normalized, 'image/png', {
         isCancelled: () => response.destroyed,
         onRecognitionFinished: ({ mode, outcome, durationMs }) => {
           response.locals.recognitionMode = mode
