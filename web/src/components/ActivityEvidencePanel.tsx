@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { ActivityEvidenceSnapshot, QualifyingActivity } from 'shared'
 import { api, messageOf } from '../lib/api'
+import { ScanIcon } from './ScanIcon'
 
 const activityNames: Record<QualifyingActivity, string> = { repair: 'Completed repair', secondhand_purchase: 'Completed secondhand purchase', donation: 'Accepted donation', recycling: 'Accepted recycling' }
 
@@ -32,14 +33,13 @@ export function ActivityEvidencePanel() {
     catch (cause) { setError(messageOf(cause)) }
     finally { setBusy(false) }
   }
-  return <section className="panel" aria-labelledby="activity-heading">
-    <p className="eyebrow">Independent activity evidence</p><h2 id="activity-heading">Partner-confirmed activity</h2>
-    <p>A connected partner can confirm a completed repair, secondhand purchase, accepted donation, or recycling. A photo or your own declaration cannot confirm an activity.</p>
-    <p><strong>{data ? `${data.verifiedActivityCredits} verified activity credits` : 'Activity credits unavailable'}</strong></p>
-    <p className="muted">Separate from demo points. These credits have no cash value and cannot redeem offers. They confirm the partner’s activity record, not garment ownership, an avoided purchase, or a measured CO₂ saving.</p>
+  return <section className="panel rewards-tool rewards-activity" aria-labelledby="activity-heading">
+    <div className="rewards-tool-heading"><span className="rewards-tool-icon"><ScanIcon name="check"/></span><div><p className="eyebrow">INDEPENDENT EVIDENCE</p><h2 id="activity-heading">Partner-confirmed activity</h2></div></div>
+    <p>A partner can confirm a repair, secondhand purchase, donation, or recycling. A photo or your own declaration cannot confirm an activity.</p>
+    <p className="rewards-activity-credit"><strong>{data ? `${data.verifiedActivityCredits} verified activity credits` : loading ? 'Checking activity credits…' : 'Activity credits unavailable'}</strong></p>
     {error && <p role="alert" className="error">{error}</p>}
     {loading && <p role="status">Checking activity verification…</p>}
-    {data && !data.enabled && <p className="note">No activity verification partner is connected yet. Verification will become available when an approved partner is connected.</p>}
+    {data && !data.enabled && <p className="rewards-unavailable"><span/>No activity verification partner is connected yet. Verification will become available when an approved partner is connected.</p>}
     {data?.enabled && <>
       <label>Verification partner<select value={partner?.id ?? ''} onChange={event => { setPartnerId(event.target.value); setCode(null) }} disabled={busy}>{data.partners.map(p => <option value={p.id} key={p.id}>{p.name}</option>)}</select></label>
       <label>Qualifying activity<select value={selectedActivity ?? ''} onChange={event => { setActivity(event.target.value as QualifyingActivity); setCode(null) }} disabled={busy}>{partner?.activities.map(a => <option value={a} key={a}>{activityNames[a]}</option>)}</select></label>
@@ -52,6 +52,6 @@ export function ActivityEvidencePanel() {
       <h4>{activityNames[receipt.activity]}</h4><p>{receipt.partnerName} · {receipt.status === 'confirmed' ? `${receipt.credits} credits confirmed` : `Reversed: ${receipt.reversalReason}`}</p>
       <p className="muted">Completed {new Date(receipt.occurredAt).toLocaleString()} · Evidence reference {receipt.id}</p>
     </article>)}</div>}
-    <p className="muted">Evidence and credits belong to this anonymous browser session. If you lose the cookie or the session expires, they cannot be recovered here. Partners must use a stable participant reference; switching browsers does not reset the partner’s participant limit. References are retained as keyed hashes to stop repeated claims, including after session expiry.</p>
+    <details className="rewards-tool-details"><summary>About activity credits <ScanIcon name="plus"/></summary><div><p>Separate from demo points. These credits have no cash value and cannot redeem offers. They confirm the partner’s activity record, not garment ownership, an avoided purchase, or a measured CO₂ saving.</p><p>Evidence and credits belong to this anonymous browser session. If you lose the cookie or the session expires, they cannot be recovered here. Partners must use a stable participant reference; switching browsers does not reset the partner’s participant limit. References are retained as keyed hashes to stop repeated claims, including after session expiry.</p></div></details>
   </section>
 }

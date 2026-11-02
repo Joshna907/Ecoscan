@@ -11,6 +11,7 @@ import {
   type MaterialType,
 } from 'shared'
 import { api, messageOf } from '../lib/api'
+import { ScanIcon } from './ScanIcon'
 
 const names: Record<MaterialType, string> = {
   cotton: 'Cotton', polyester: 'Polyester', nylon: 'Nylon', wool: 'Wool', linen: 'Linen',
@@ -80,19 +81,19 @@ export function MaterialProfileEditor({ itemNumber, category, profile, disabled,
   }
 
   return <details className="material-editor">
-    <summary>Material and weight {profile ? <span className="badge">confirmed</span> : <span className="muted">optional, improves the estimate</span>}</summary>
+    <summary><ScanIcon name="ruler"/><span>Material and weight</span><span className="scan-material-state">{profile ? 'Confirmed' : 'Optional'}</span><span className="scan-material-toggle" aria-hidden="true">+</span></summary>
     <div className="material-editor-body">
       <h3>Read the care label</h3>
-      <p className="muted">Use a close, well-lit photo of the fibre-composition text. EcoScan reads the printed label; it does not guess material from the garment photo.</p>
-      <input disabled={disabled || reading} aria-label={`Care-label photo for item ${itemNumber}`} type="file" accept="image/jpeg,image/png,image/webp" capture="environment"
+      <p className="muted">Add a close-up of the printed fibre composition. We read the label, then you check the blend.</p>
+      <div className="scan-label-controls"><label className="scan-label-file" data-disabled={disabled || reading}><ScanIcon name="upload"/><span>{labelPhoto ? 'Change label photo' : 'Add label photo'}</span><input disabled={disabled || reading} aria-label={`Care-label photo for item ${itemNumber}`} type="file" accept="image/jpeg,image/png,image/webp" capture="environment"
         onChange={(event) => {
           const file = event.target.files?.[0] ?? null
-          if (file && (file.size > MAX_UPLOAD_BYTES || !['image/jpeg','image/png','image/webp'].includes(file.type))) { setMessage('Choose a JPEG, PNG or WebP label up to 4 MiB.'); return }
+          event.target.value = ''
+          if (file && (!file.size || file.size > MAX_UPLOAD_BYTES || !['image/jpeg','image/png','image/webp'].includes(file.type))) { onInvalidate(); setLabelPhoto(null); setPreview(''); setMessage('Choose a JPEG, PNG or WebP label up to 4 MiB.'); return }
           onInvalidate(); setLabelPhoto(file); setPreview(file ? URL.createObjectURL(file) : ''); setZoom(false); setMessage('')
-        }} />
+        }} /></label><button type="button" className="secondary" disabled={disabled || componentMode || !labelPhoto || reading} onClick={() => void readLabel()}>{reading ? 'Reading label…' : 'Read label'}</button></div>
       {preview && <div className={zoom ? 'label-preview zoomed' : 'label-preview'}><img src={preview} alt="Selected care label for checking the extracted blend" /><button type="button" className="secondary" onClick={() => setZoom(value => !value)}>{zoom ? 'Fit label' : 'Zoom label'}</button></div>}
-      <button type="button" className="secondary" disabled={disabled || componentMode || !labelPhoto || reading} onClick={() => void readLabel()}>{reading ? 'Reading label…' : 'Read label'}</button>
-      <p className="muted">With AI enabled, this photo is sent to OpenAI for reading and is not saved with your result. Do not include people or personal information.</p>
+      <p className="scan-label-privacy">With AI enabled, label photos are sent to OpenAI and aren’t saved with your result. Keep personal information out of the photo.</p>
 
       <h3>Confirm the printed blend</h3>
       <label><input type="checkbox" disabled={disabled || reading} checked={componentMode} onChange={event => { setComponentMode(event.target.checked); onInvalidate() }} /> Enter measured garment components</label>
@@ -106,9 +107,9 @@ export function MaterialProfileEditor({ itemNumber, category, profile, disabled,
         </fieldset>)}
         <button type="button" className="secondary" disabled={disabled || reading || components.length >= 5} onClick={() => { setComponents(rows => [...rows, { kind: 'shell', weightGrams: 0, composition: [] }]); onInvalidate() }}>Add component</button>
       </div>}
-      <p>Enter the blend from the label. For lined, padded or mixed-component items, do not apply a shell or upper label to the entire item weight. Leave details unconfirmed if component weights are unknown.</p>
+      <p className="scan-blend-help">For lined or padded items, use measured components. A shell or shoe-upper label must not be applied to the whole item.</p>
       <label><input type="checkbox" disabled={disabled || reading} checked={wholeItem} onChange={(event) => { setWholeItem(event.target.checked); onInvalidate() }} /> {componentMode ? 'I confirm these measured component masses and their label blends.' : 'This blend represents the whole weighed item, not only its shell or lining.'}</label>
-      <p className="muted">Blends or components without a verified factor are excluded from the material estimate. The category benchmark remains available; Results shows the supported mass.</p>
+      <p className="scan-label-privacy">Supported fibre fractions are calculated. Missing factors stay unknown, and Results shows the coverage.</p>
       {!componentMode && composition.map((part, index) => <div className="material-row" key={`${index}-${part.material}`}>
         <label>Material<select disabled={disabled || reading} value={part.material} onChange={(event) => update(composition.map((value, row) => row === index ? { ...value, material: event.target.value as MaterialType } : value))}>
           {materialTypeSchema.options.map((material) => <option key={material} value={material}>{names[material]}</option>)}
@@ -118,10 +119,11 @@ export function MaterialProfileEditor({ itemNumber, category, profile, disabled,
       </div>)}
       <div className="actions"><button disabled={disabled || reading || componentMode || composition.length >= 6} type="button" className="secondary" onClick={() => update([...composition, { material: 'polyester', percentage: Math.max(1, 100 - total) }])}>Add material</button><span className={total === 100 ? 'muted' : 'error-inline'}>Total: {total}%</span></div>
       <label className="weight-field">Weight of one item in grams <span className="muted">(optional)</span><input disabled={disabled || reading} type="number" min="20" max="5000" required={componentMode} value={weight} placeholder="Use a category weight range" onChange={(event) => { setWeight(event.target.value); onInvalidate(); setMessage('Review and confirm these details.') }} /></label>
-      <p className="muted">Weigh one dry item (a pair for shoes); quantity multiplies this weight. If you do not know the weight, EcoScan uses category screening bounds. {defaultWeight && <>Low {defaultWeight.low} g · central {defaultWeight.central} g · high {defaultWeight.high} g per item. These are assumptions, not population statistics; measure unusual garments.</>}</p>
+      <details className="scan-weight-help"><summary>Don’t know the weight?</summary><p className="muted">Weigh one dry item (a pair for shoes); quantity multiplies this weight. If you do not know the weight, EcoScan uses category screening bounds. {defaultWeight && <>Low {defaultWeight.low} g · central {defaultWeight.central} g · high {defaultWeight.high} g per item. These are assumptions, not population statistics; measure unusual garments.</>}</p></details>
+      {!profile && (composition.length > 0 || components.length > 0) && <p className="scan-material-pending">Confirm these details to include them. You can also continue with the category estimate only.</p>}
       {message && <p role="status" className="note compact-note">{message}</p>}
       <div className="actions"><button type="button" disabled={disabled || reading || !wholeItem || !candidate.success} onClick={() => { if (candidate.success) { onConfirm(candidate.data); setMessage('Material details confirmed.') } }}>Confirm material details</button>{profile && <button type="button" className="secondary" disabled={disabled || reading} onClick={() => { onInvalidate(); setMessage('Material details removed from this estimate.') }}>Remove material details</button>}</div>
-      {!candidate.success && <p className="error-inline">Use unique fibres totaling 100% per blend. Components need a whole-item weight and masses no greater than that weight. Weight must be 20–5,000 g.</p>}
+      {!candidate.success && (composition.length > 0 || components.length > 0 || weight) && <p className="error-inline">Use unique fibres totaling 100% per blend. Components need a whole-item weight and masses no greater than that weight. Weight must be 20–5,000 g.</p>}
     </div>
   </details>
 }

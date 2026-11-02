@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import App from '../src/App'
 import { api, ApiError } from '../src/lib/api'
@@ -41,6 +41,24 @@ async function uploadPhoto(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByRole('button', { name: 'Scan photo' }))
 }
 describe('EcoScan user journeys', () => {
+  it('accepts one dropped photo and keeps quantity steppers inside the item limit',async()=>{
+    const user=userEvent.setup();render(<App/>)
+    const dropzone=screen.getByText('Drop your photo here').closest('label')!
+    const file=new File(['photo'],'shirt.png',{type:'image/png'})
+    fireEvent.drop(dropzone,{dataTransfer:{files:[file,file]}})
+    expect(screen.getByRole('alert').textContent).toContain('Choose one photo at a time')
+    fireEvent.drop(dropzone,{dataTransfer:{files:[file]}})
+    expect(screen.queryByRole('alert')).toBeNull()
+    await user.click(screen.getByRole('button',{name:'Scan photo',exact:true}))
+    await screen.findByRole('heading',{name:'Check the clothing items'})
+    await user.click(screen.getByRole('button',{name:'Increase quantity for item 1'}))
+    expect((screen.getByLabelText('Quantity for item 1') as HTMLInputElement).value).toBe('2')
+    await user.click(screen.getByRole('button',{name:'Decrease quantity for item 1'}))
+    expect((screen.getByLabelText('Quantity for item 1') as HTMLInputElement).value).toBe('1')
+    await user.clear(screen.getByLabelText('Quantity for item 1'));await user.type(screen.getByLabelText('Quantity for item 1'),'10')
+    expect((screen.getByRole('button',{name:'Increase quantity for item 1'}) as HTMLButtonElement).disabled).toBe(true)
+    expect((screen.getByRole('button',{name:'Add an item'}) as HTMLButtonElement).disabled).toBe(true)
+  })
   it('labels supported fibre contributions as incomplete and names missing elastane mass',async()=>{
     vi.mocked(api.latestScan).mockResolvedValue({result:{...result,assumptionsVersion:'materials-v2',materialProfiledQuantity:2,materialStageKgCo2e:{low:0.89,central:1.78,high:2.67},items:[{...result.items[0],materialProfile:{source:'manual',userConfirmed:true,weightGrams:200,composition:[{material:'cotton',percentage:98},{material:'elastane',percentage:2}]},materialStageKgCo2e:{low:0.89,central:1.78,high:2.67},effectiveWeightGrams:{low:200,central:200,high:200,source:'measured'},materialCoverageGrams:196,materialCoverage:{status:'partial',supportedMassGrams:196,uncoveredMassGrams:4,unallocatedMassGrams:0,missingFactors:[{material:'elastane',weightGrams:4}]}}]}})
     window.location.hash='#/results';render(<App/>)
@@ -70,7 +88,8 @@ describe('EcoScan user journeys', () => {
     await user.click(screen.getByRole('button', { name: 'Confirm and see estimate' }))
     await screen.findByRole('heading', { name: 'Your clothing estimate' })
     expect(api.confirm).toHaveBeenCalledWith({ analysisId: id, items: [{ category: 'jeans', quantity: 2 }], replacesPlannedNewPurchase: true })
-    expect(screen.getAllByText('12–32 kg CO₂e (central 20)').length).toBe(2)
+    expect(screen.getByText('12–32 kg CO₂e (central 20)')).toBeTruthy()
+    expect(within(screen.getByRole('region', { name: 'Estimate summary' })).getByText('20 kg CO₂e')).toBeTruthy()
     await user.click(within(screen.getByRole('navigation')).getByRole('link', { name: 'Rewards' }))
     await screen.findByText('100 demo points')
     await waitFor(() => expect((screen.getByRole('button', { name: 'Redeem demo offer' }) as HTMLButtonElement).disabled).toBe(false))
@@ -85,12 +104,22 @@ describe('EcoScan user journeys', () => {
     expect(api.redeem).toHaveBeenCalledTimes(1)
   })
   it('loads the latest saved estimate after a page refresh', async () => {
+    const user = userEvent.setup()
     vi.mocked(api.latestScan).mockResolvedValue({ result })
     window.location.hash = '#/results'
     render(<App />)
     await screen.findByRole('heading', { name: 'Your clothing estimate' })
-    expect(screen.getAllByText('12–32 kg CO₂e (central 20)').length).toBe(2)
+    expect(screen.getByText('12–32 kg CO₂e (central 20)')).toBeTruthy()
+    expect(within(screen.getByRole('region', { name: 'Estimate summary' })).getByText('20 kg CO₂e')).toBeTruthy()
     expect(api.latestScan).toHaveBeenCalledTimes(1)
+    const boundary = screen.getByText(/Low\/high values are sensitivity scenarios/).closest('details')!
+    expect(boundary.open).toBe(false)
+    await user.click(within(boundary).getByText(/Boundary and uncertainty/))
+    expect(boundary.open).toBe(true)
+    expect(boundary.textContent).toContain(result.factorDatasetVersion)
+    const rewards = screen.getByText(/Material and weight entries never increase rewards/).closest('details')!
+    await user.click(within(rewards).getByText(/Your comparison and demo points/))
+    expect(rewards.open).toBe(true)
   })
   it('rejects unsupported files before calling the backend', async () => {
     const user = userEvent.setup({ applyAccept: false })
@@ -124,7 +153,7 @@ describe('EcoScan user journeys', () => {
     await user.click(await screen.findByLabelText('No, or I’m not sure'))
     await user.click(screen.getByRole('button', { name: 'Confirm and see estimate' }))
     await screen.findByRole('heading', { name: 'Your clothing estimate' })
-    expect(screen.getByText('0 points')).toBeTruthy()
+    expect(screen.getByText((_, node) => node?.tagName === 'STRONG' && node.textContent === '0 points')).toBeTruthy()
     expect(api.confirm).toHaveBeenCalledWith(expect.objectContaining({ replacesPlannedNewPurchase: false }))
   })
   it('holds an uncertain confirmation unchanged for a safe retry', async () => {
