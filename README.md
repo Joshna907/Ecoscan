@@ -2,7 +2,7 @@
 
 A full-stack take-home project for Reewild. Upload a clothing photo, review the detected items, optionally confirm care-label composition and weight, and explore carbon screening ranges and demo rewards without signing up.
 
-**[Live demo](https://ecoscann.vercel.app/) | [GitHub repository](https://github.com/Joshna907/Ecoscan) | [Demo walkthrough](#demo-walkthrough) | [Deployment guide](docs/VERCEL.md)**
+**[Live demo](https://ecoscann.vercel.app/) **
 
 > Carbon results are screening estimates, not measurements of the photographed garment or verified emissions savings. Offers, points, PDFs, and voucher actions are fictional demonstrations: no real goods, money, carbon credits, or commercial vouchers are issued.
 
