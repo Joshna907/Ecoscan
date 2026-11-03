@@ -28,14 +28,14 @@ flowchart LR
 
 This is one deployable backend (a modular monolith), not microservices. `web/` handles interaction, `backend/` owns rules and state, `api/index.ts` adapts it to a Vercel Function, and `shared/` holds request/response schemas used by both. The recognition adapter returns item *suggestions only*. It never decides carbon or points.
 
-Anonymous browser sessions own balances, receipts and latest results. There are no accounts, passwords or cross-device recovery. See [anonymous reward lifecycle](ANONYMOUS_REWARDS.md).
+Anonymous browser sessions own balances, receipts and latest results. There are no accounts or passwords. A separately saved private key can recover a read-only receipt across browsers; results and balances cannot be recovered. See [anonymous reward lifecycle](ANONYMOUS_REWARDS.md).
 
 ```text
 web/src/pages/               home, scan, results and rewards pages
 web/src/hooks/               scan workflow and rewards state
 web/src/components/          camera, navigation, and home sections
 web/src/lib/api.ts           backend client
-backend/src/routes/             HTTP upload, confirmation, latest result, offers, auth
+backend/src/routes/             HTTP upload, confirmation, latest result, offers, activity evidence, recovery
 backend/src/services/           analysis, confirmation, and offer workflows; storage contract
 backend/src/services/vision/    mock and optional provider adapters
 backend/src/domain/             carbon catalogue, scenario, points, offers

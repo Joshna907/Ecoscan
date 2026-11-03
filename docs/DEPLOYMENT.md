@@ -29,13 +29,13 @@ docker compose --env-file .env.production -f compose.prod.yaml ps
 curl.exe http://127.0.0.1:5000/api/ready
 ```
 
-The migration container must finish successfully before the API and worker start. `/api/health` checks that the HTTP process responds; `/api/ready` also checks its database connection. The API's container health check uses `/api/ready`. A ready response does not prove that the worker or OpenAI is currently available. Check both processes with:
+The migration container must finish successfully before the API and worker start. `/api/health` checks that the HTTP process responds; `/api/ready` checks the expected schema and recent retention maintenance. The API's container health check uses `/api/ready`. The long-running API schedules cleanup; on a fresh deployment run the release preparation before starting services, or allow the first cleanup interval before checking readiness. A ready response does not prove that the worker or OpenAI is currently available. Check both processes with:
 
 ```powershell
 docker compose --env-file .env.production -f compose.prod.yaml logs --tail=100 api worker migrate
 ```
 
-Try the complete upload, status, confirmation, and offers flow over the **HTTPS proxy** using the examples in the main README. In PostgreSQL mode, the upload returns `202 queued`; the worker later makes the scan `ready`. Confirm the same analysis twice and verify that points are awarded once. Restart the API and verify the demo balance persists while the session remains valid.
+Try the [complete demo walkthrough](../README.md#demo-walkthrough) over the **HTTPS proxy**. In this long-running PostgreSQL deployment, upload returns `202 queued`; the worker later makes the scan `ready`. Confirm the same analysis twice and verify that points are awarded once. Restart the API and verify the demo balance persists while the session remains valid. Mock scans do not earn points; the isolated release smoke test stubs a live-recognition response to exercise the positive reward path without paid provider calls.
 
 ## Operating the service
 
@@ -47,4 +47,6 @@ Try the complete upload, status, confirmation, and offers flow over the **HTTPS 
 
 ## Deployment boundary
 
-The backend can be run and scaled as a **demo service**, but this is not a verified rewards platform. Anonymous sessions expire; optional accounts identify returning users but do not verify a purchase was avoided. A repeated byte-identical photograph can create another estimate but earns zero additional points in the same session or account; offers are fictitious. Before offering real rewards, add email verification, a durable reward ledger, stronger near-duplicate detection, eligibility verification, fraud controls, and an offer partner integration. Before claiming production reliability, run the PostgreSQL integration suite, a real-provider scan, a restore drill, and a load test in the target environment.
+The backend is a **demo service**, not a verified rewards platform. There are no accounts, passwords, or sign-up. Anonymous sessions expire; results and balances cannot be recovered across browsers. A separately saved private key can retrieve a read-only receipt. Reward-claimed images and common cropped, rotated, resized, or recompressed variants cannot earn again across sessions for 90 days. Daily earnings are capped at 250 points per browser session (UTC); manual, corrected, mock, duplicate, and non-replacement scans earn zero. These checks do not establish ownership, one person per browser, or avoided purchases.
+
+Offers are fictional, with demo inventory, terms, expiry, idempotent redemption, and unused-voucher refunds. Before offering real benefits, onboard verification and fulfilment partners, implement provider issuance/reconciliation and recovery/refund rules, and operate fraud review and monitoring. Partner-confirmed activity credits remain separate and non-redeemable. Before claiming production reliability, run the PostgreSQL integration suite, a real-provider scan, a restore drill, and a load test in the target environment.

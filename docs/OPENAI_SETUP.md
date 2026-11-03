@@ -7,7 +7,7 @@ EcoScan has two recognition modes. `mock` returns a fixed T-shirt suggestion for
 From PowerShell:
 
 ```powershell
-Set-Location C:\Users\dell\Desktop\ecoscan
+Set-Location Ecoscan
 Copy-Item backend\.env.example backend\.env
 notepad backend\.env
 ```
@@ -23,11 +23,11 @@ The key belongs only on the backend. Do not paste it into chat, put it in the Re
 ## What happens during a scan
 
 1. `POST /api/analyses` accepts one JPEG, PNG, or WebP file, at most 4 MiB.
-2. The backend checks the declared MIME type and file signature. In PostgreSQL mode it stores the image bytes privately in the job table until a worker processes or expires the job; in memory mode it calls OpenAI during the request.
+2. The backend checks the declared MIME type and file signature. The long-running PostgreSQL deployment stores image bytes privately in the job table until a worker processes or expires the job. The Vercel/Neon and in-memory deployments call OpenAI during the upload request.
 3. OpenAI returns category suggestions from `tshirt`, `jeans`, `jacket`, and `shoes`. Unknown or unclear garments are omitted. The server caps the returned list at ten items.
-4. In PostgreSQL mode, the upload returns `202 queued`; poll `GET /api/analyses/:analysisId` until `ready`. The ready result has `recognitionMode: "vision"` and `needsReview: true`. A later confirmation always produces a deterministic category estimate; corrections make the scan ineligible for points.
+4. In the long-running PostgreSQL deployment, upload returns `202 queued`; poll `GET /api/analyses/:analysisId` until `ready`. The ready result has `recognitionMode: "vision"` and `needsReview: true`. A later confirmation always produces a deterministic category estimate; corrections make the scan ineligible for points.
 
-If OpenAI is unavailable, in-memory mode returns `503 VISION_UNAVAILABLE`; PostgreSQL mode retries the job and eventually reports `failed`. Neither mode silently invents a result. Check that the key is present, the model is accessible to the API project, and the API project has available usage. Never log the key or uploaded image while debugging.
+If OpenAI is unavailable, direct recognition (Vercel or memory mode) returns `503 VISION_UNAVAILABLE`; the long-running PostgreSQL worker retries the job and eventually reports `failed`. Neither path silently invents a result. Check that the key is present, the model is accessible to the API project, and the API project has available usage. Never log the key or uploaded image while debugging.
 
 ## Run local checks
 
